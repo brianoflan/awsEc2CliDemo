@@ -49,11 +49,35 @@ if [[ ! -d $tmp ]] ; then
   mkdir $tmp ;
 fi ;
 
+
+# # # BEGIN execute
+
+if [[ -z $DEBUG ]] ; then
+  DEBUG='' ;
+fi ;
+function execute {
+  cmdX="$@" ;
+  if [[ $DEBUG -gt 0 ]] ; then
+    echo "execute $@" 1>&2 ;
+  fi ;
+  "$@" ;
+  error=$? ;
+  if [[ -z $error || "$error" == "" || "$error" == "0" ]] ; then
+    true ;
+  else
+    echo "ERROR: From command $cmdX: '$error'." 1>&2 ;
+    exit $error ;
+  fi ;
+}
+
+# # # END execute
+
+
 # # # MAIN
 
 # # http://docs.aws.amazon.com/AWSEC2/latest/CommandLineReference/ApiReference-cmd-RunInstances.html
 # if [[ '1' ]] ; then
-alreadyVpc=`ec2-describe-vpcs -F "cidr=$vpcCidr" ` ;
+alreadyVpc=`execute ec2-describe-vpcs -F "cidr=$vpcCidr" ` ;
 if [[ $alreadyVpc ]] ; then
   echo "Already a VPC." ;
 else

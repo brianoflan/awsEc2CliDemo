@@ -4,5 +4,6 @@
     </publications>    
     <dependencies>
         <dependency org="com.amazon.aws" name="ec2-api-tools" rev="+"/>
+        <dependency org="org.joda" name="joda-time" rev="+"/>
     </dependencies>
 </ivy-module>
