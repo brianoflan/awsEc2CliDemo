@@ -1,0 +1,10 @@
+<ivy-module version="2.0">
+    <info organisation="org.example" module="module2"/>
+    <publications>
+    	<artifact name="Library_A" type="jar" ext="jar" />
+    </publications>    
+    <dependencies>
+        <dependency org="org.apache.commons" name="commons-lang" rev="2.+"/>
+        <dependency org="org.apache.ivy" name="ivy" rev="[2.1,2.2["/>
+    </dependencies>
+</ivy-module>
