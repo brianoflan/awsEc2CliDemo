@@ -42,6 +42,7 @@
         <property name="ec2Url" value="https://${ec2RegionUrlDomain}" />
 
         <echo message="mkSecGroup.sh" />
+        <chmod file="${basedir}/scripts/mkSecGroup.sh" perm="ug+rx" />
         <exec executable="${basedir}/scripts/mkSecGroup.sh" >
             <env key="AWS_ACCESS_KEY" value="${ec2AccessKey}" />
             <env key="AWS_SECRET_KEY" value="${ec2SecretKey}" />
