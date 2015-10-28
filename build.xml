@@ -1,7 +1,83 @@
-awsEc2SecGroups.txt
-describeInstance.txt
-keyPairOutput.txt
-keyPairPrivate.pem
-runInstance.txt
-sgRules.err
-sgRules.txt
+<project name="devOpsAwsEc2Cli" default="go" xmlns:ivy="antlib:org.apache.ivy.ant">
+    <property environment="env" />
+    <property file="build.properties" />
+    <!--echo message="pathToSharedBuild = ${pathToSharedBuild}" /-->
+    <import file="${pathToSharedBuild}/shared-build.xml" />
+    
+    <target name="-check-for-tools">
+        <available property="alreadyUnzipped"
+          file="${basedir}/${build.dir}/ec2-api-tools"
+          type="dir"
+        />
+    </target>
+    <target name="-unzip-tools" depends="-check-for-tools" unless="alreadyUnzipped" >
+        <unzip src="${basedir}/lib/ec2-api-tools.zip"
+          dest="${basedir}/${build.dir}/ec2-api-tools"
+          >
+            <patternset>
+                <include name="ec2-api-tools-${ec2ApiToolsRevision}/**"/>
+            </patternset>
+            <mapper>
+                <globmapper from="ec2-api-tools-${ec2ApiToolsRevision}/*" to="*"/>
+            </mapper>
+        </unzip>
+    </target>
+    
+    <target name="-compile" depends="-unzip-tools" >
+        <echo message="Demonstrate Amazone EC2 command line power." />
+        <property name="ec2Home" value="${basedir}/${build.dir}/ec2-api-tools" />
+        <chmod dir="${ec2Home}/bin" perm="ug+x" includes="**" >
+        </chmod>
+        <loadfile property="ec2AccessKey" srcFile="${ec2PrivatesFolder}/access" />
+        <loadfile property="ec2SecretKey" srcFile="${ec2PrivatesFolder}/secret" />
+        
+        <echo message="ec2-describe-regions" />
+        <exec executable="${ec2Home}/bin/ec2-describe-regions" >
+            <env key="AWS_ACCESS_KEY" value="${ec2AccessKey}" />
+            <env key="AWS_SECRET_KEY" value="${ec2SecretKey}" />
+            <env key="JAVA_HOME" value="${env.JAVA_HOME}" />
+            <env key="EC2_HOME" value="${ec2Home}" />
+            <env key="PATH" value="${ec2Home}/bin:${env.JAVA_HOME}/bin:${env.PATH}" />
+        </exec>
+        <property name="ec2Url" value="https://${ec2RegionUrlDomain}" />
+
+        <echo message="mkSecGroup.sh" />
+        <exec executable="${basedir}/scripts/mkSecGroup.sh" >
+            <env key="AWS_ACCESS_KEY" value="${ec2AccessKey}" />
+            <env key="AWS_SECRET_KEY" value="${ec2SecretKey}" />
+            <env key="BUILD_DIR" value="${basedir}/${build.dir}" />
+            <env key="EC2_HOME" value="${ec2Home}" />
+            <env key="EC2_URL" value="${ec2Url}" />
+            <env key="INSTANCE_TYPE" value="${ec2InstanceType}" />
+            <env key="JAVA_HOME" value="${env.JAVA_HOME}" />
+            <env key="PATH" value="${ec2Home}/bin:${env.JAVA_HOME}/bin:${env.PATH}" />
+            <env key="USE_EC2_AMI" value="${ec2Ami}" />
+            <env key="USE_THIS_SEC_GRP" value="${securityGroup}" />
+        </exec>
+
+        <!--
+        <exec executable="${ec2Home}/bin/ec2-run-instances" >
+            <arg value="" />
+            <env key="AWS_ACCESS_KEY" value="${ec2AccessKey}" />
+            <env key="AWS_SECRET_KEY" value="${ec2SecretKey}" />
+            <env key="JAVA_HOME" value="${env.JAVA_HOME}" />
+            <env key="EC2_HOME" value="${ec2Home}" />
+            <env key="PATH" value="${ec2Home}/bin:${env.JAVA_HOME}/bin:${env.PATH}" />
+        </exec>
+        -->
+        
+        <!--
+        <echoproperties prefix="ivy">
+        </echoproperties>
+        -->
+    </target>
+    <target name="-compile-ivy-retrieve" >
+        <ivy:retrieve
+          pattern="${basedir}/lib/[artifact].[ext]"
+          sync="true"
+          symlink="true"
+        />
+        <ivy:artifactproperty name="ec2ApiToolsRevision" value="[revision]" />
+        <echo message="ec2ApiToolsRevision = '${ec2ApiToolsRevision}'" />
+    </target>
+</project>
