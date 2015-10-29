@@ -121,7 +121,7 @@ fi ;
 cat $f | perl $thisDir/listRules.pl > $tmp/sgRules.txt 2> $tmp/sgRules.err ;
 
 # alreadyARule=`cat $tmp/sgRules.txt | grep ingress | egrep "ALLOWS[ \t][ \t]*tcp[ \t]22[ \t]" ` ;
-alreadyARule=`cat $tmp/sgRules.txt | grep ingress | perl -ne "/ALLOWS\\s+${secGrpRuleProtocol}\\s+${secGrpRuleProtocol}\\s/ && print \$_" ` ;
+alreadyARule=`cat $tmp/sgRules.txt | grep ingress | perl -ne "/ALLOWS\\s+${secGrpRuleProtocol}\\s+${secGrpRulePort}\\s/ && print \$_" ` ;
 if [[ $alreadyARule ]] ; then
   # echo "TCP 22 is already a rule."
   # echo "Already a rule (TCP 22)."

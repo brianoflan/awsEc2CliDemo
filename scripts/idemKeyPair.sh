@@ -71,7 +71,8 @@ fi ;
 #
 
 
-keyPairDir=$tmp/../AwsEc2KeyPairs.d ;
+# Should resolve to the module's base folder, not the 'build' or 'build/tmp' folder.
+keyPairDir=$tmp/../../AwsEc2KeyPairs.d ;
 if [[ ! -d $keyPairDir ]] ; then
   execute mkdir -p $keyPairDir ;
 fi ;
@@ -81,7 +82,7 @@ keyPairFile=$keyPairDir/$keyPairName.keyPairPrivate.pem ;
 # $keyPairName
 
 # # http://docs.aws.amazon.com/cli/latest/userguide/cli-ec2-keypairs.html
-alreadyAKeypair=`ls -d $keyPairFile` ;
+alreadyAKeypair=`ls -d $keyPairFile 2>/dev/null` ;
 if [[ $alreadyAKeypair ]] ; then
   echo "Already have a key pair for keyPairName $keyPairName." 1>&2 ;
 else

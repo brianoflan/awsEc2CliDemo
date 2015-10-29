@@ -4,7 +4,7 @@
 # # Valuable but less official: https://www.linux.com/learn/tutorials/761430-an-introduction-to-the-aws-command-line-tool
 
 if [[ -z $secGrpRule_useExclusiveIp ]] ; then
-  $secGrpRule_useExclusiveIp='1' ;
+  secGrpRule_useExclusiveIp='1' ;
 fi ;
 if [[ -z $instancePrivateIp ]] ; then
   instancePrivateIp='12.3.4.5' ;
@@ -93,7 +93,7 @@ fi ;
 
 echo > $BUILD_DIR/source_me.sh ;
 for x in AWS_ACCESS_KEY AWS_SECRET_KEY EC2_HOME EC2_URL JAVA_HOME PATH CLASSPATH ; do
-  eval "echo \"$x=$$x\"" >> $BUILD_DIR/source_me.sh ;
+  eval "echo \"$x=\$$x\"" >> $BUILD_DIR/source_me.sh ;
 done ;
 
 # if [[ '1' ]] ; then
@@ -134,9 +134,6 @@ if [[ '1' ]] ; then
   echo "Success. findAmiTmp=$findAmiTmp" ;
 fi ;
   
-  echo "Success." ;
-  exit 0 ;
-
 if [[ '1' ]] ; then
   execute $thisDir/idemKeyPair.sh "$keyPairName" > $tmp/keyPair ;
   export keyPairTmp=`cat $tmp/keyPair ` ;
@@ -153,7 +150,8 @@ if [[ '1' ]] ; then
   echo "Success. instanceId=$instanceId" ;
 fi ;
 
-
+echo "Success." ;
+exit 0 ;
 
 # 
 

@@ -6,10 +6,10 @@ grepOut="(BLOCKDEVICEMAPPING|elasticbeanstalk|minimal|suse|windows)" ;
 grepFor=`date -u +'%Y-%m'` ;
 
 if [[ -z $findAmi_owner ]] ; then
-  $findAmi_owner=$defaultOwner ;
+  findAmi_owner=$defaultOwner ;
 fi ;
 if [[ -z $findAmi_rootDev ]] ; then
-  $findAmi_rootDev=$defaultRootDev ;
+  findAmi_rootDev=$defaultRootDev ;
 fi ;
 
 

@@ -6,6 +6,10 @@
 
 defaultDoAssociatePublicIp='false' ;
 
+if [[ -z $INSTANCE_TYPE ]] ; then
+  export INSTANCE_TYPE=t2.micro ;
+fi ;
+
 if [[ -z $1 ]] ; then
   if [[ -z $vpcId ]] ; then
     echo "ERROR:  Inadequate args"'!' 1>&2 ;
@@ -129,40 +133,6 @@ fi ;
 
 #
 
-# # From idemSecGrp:
-# $vpcId $secGrpName $secGrpDesc
-f=$tmp/awsEc2SecGroups.txt ;
-
-if [[ ! -e $f ]] ; then
-  echo "ERROR:  Please run idemSecGrp.sh first.  (I can't find $f.)" 1>&2 ;
-  exit 1 ;
-fi ;
-
-cat $f | perl $thisDir/listRules.pl > $tmp/sgRules.txt 2> $tmp/sgRules.err ;
-
-# alreadyARule=`cat $tmp/sgRules.txt | grep ingress | egrep "ALLOWS[ \t][ \t]*tcp[ \t]22[ \t]" ` ;
-alreadyARule=`cat $tmp/sgRules.txt | grep ingress | perl -ne "/ALLOWS\\s+${secGrpRuleProtocol}\\s+${secGrpRuleProtocol}\\s/ && print \$_" ` ;
-if [[ $alreadyARule ]] ; then
-  # echo "TCP 22 is already a rule."
-  # echo "Already a rule (TCP 22)."
-  echo "Already a rule (${secGrpRuleProtocol} ${secGrpRulePort})."
-else
-
-  # cmdX="ec2-authorize $USE_THIS_SEC_GRP -P tcp -p 22 -s ${myIpv4}/24" ;
-  # cmdX="ec2-authorize $secGrpId -P tcp -p 22 -s ${myIpv4}/24" ;
-  cmdX="ec2-authorize $secGrpId -P $secGrpRuleProtocol -p $secGrpRulePort" ;
-  if [[ -n $secGrpRuleExclusiveIp ]] ; then
-    cmdX="$cmdX -s ${myIpv4Cidr}" ;
-  fi ;
-  echo "  Cmd: $cmdX" ;
-  error='' ;
-  $cmdX ; error=$? ;
-  if [[ $error -gt 0 ]] ; then
-    echo "  Error (non-zero exit code, $error) from command." 1>&2 ;
-    exit $error ;
-  fi ;
-fi ;
-
 # # http://docs.aws.amazon.com/AWSEC2/latest/CommandLineReference/ApiReference-cmd-DescribeInstances.html
 # # http://docs.aws.amazon.com/AWSEC2/latest/CommandLineReference/ApiReference-cmd-RunInstances.html
 # alreadyInstance=`ec2-describe-instances -F "vpc-id=$vpcId" -F "subnet-id=$subnetId" ` ;
@@ -170,7 +140,6 @@ alreadyInstance=`ec2-describe-instances -F "vpc-id=$vpcId" -F "subnet-id=$subnet
 if [[ $alreadyInstance ]] ; then
   echo "Already an instance." ;
 else
-# # #  idemInstance.sh $vpcId $subnetId $secGrpId $keyPairName $ec2_ami $instancePrivateIp $trueFalseAssociatePublicIpAddress
   cmdX="ec2-run-instances $ec2_ami -k $keyPairName -g $secGrpId \
     -t $INSTANCE_TYPE -s $subnetId --private-ip-address $instancePrivateIp \
     --associate-public-ip-address $trueFalseAssociatePublicIpAddress
