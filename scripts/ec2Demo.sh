@@ -3,6 +3,11 @@
 # # http://docs.aws.amazon.com/AWSEC2/latest/CommandLineReference/ec2-cli-launch-instance.html
 # # Valuable but less official: https://www.linux.com/learn/tutorials/761430-an-introduction-to-the-aws-command-line-tool
 
+# BEGIN NAS
+  nasIp='12.3.4.6' ;
+  nasSecGrp='cliDemoSG_NAS' ;
+# END NAS
+
 if [[ -z $secGrpRule_useExclusiveIp ]] ; then
   secGrpRule_useExclusiveIp='1' ;
 fi ;
@@ -107,13 +112,6 @@ done ;
   export subnetId=`cat $tmp/subnetId ` ;
 # fi ;
 
-# if [[ '1' ]] ; then
-  secGrpName=$USE_THIS_SEC_GRP ;
-  execute $thisDir/idemSecGrp.sh "$vpcId" "$secGrpName" "$secGrpDesc" > $tmp/secGrpId ;
-  export secGrpId=`cat $tmp/secGrpId ` ;
-  # echo "Success. secGrpId=$secGrpId" ;
-# fi ;
-
 if [[ $secGrpRule_useExclusiveIp ]] ; then
   execute ifconfig > $tmp/ifconfig ;
   myIpv4=`cat $tmp/ifconfig | grep 'inet addr' | grep -v '127\.0\.0\.1' ` ;
@@ -123,16 +121,43 @@ else
 fi ;
 
 # if [[ '1' ]] ; then
+  secGrpName=$USE_THIS_SEC_GRP ;
+  execute $thisDir/idemSecGrp.sh "$vpcId" "$secGrpName" "$secGrpDesc" > $tmp/secGrpId ;
+  export secGrpId=`cat $tmp/secGrpId ` ;
+  # echo "Success. secGrpId=$secGrpId" ;
+# fi ;
+
+  secGrpDesc="NAS Security Group for Amazon EC2 demo 1." ;
+  secGrpName=$nasSecGrp ;
+  execute $thisDir/idemSecGrp.sh "$vpcId" "$secGrpName" "$secGrpDesc" > $tmp/secGrpId ;
+  export secGrpIdNas=`cat $tmp/secGrpId ` ;
+  
+  # SMB/Samba/CIFS:
+  execute $thisDir/idemSecGrpRule.sh "$secGrpIdNas" "137" "udp" "$myIpv4" > $tmp/secGrpRule ;
+  execute $thisDir/idemSecGrpRule.sh "$secGrpIdNas" "138" "tcp" "$myIpv4" > $tmp/secGrpRule ;
+  execute $thisDir/idemSecGrpRule.sh "$secGrpIdNas" "139" "tcp" "$myIpv4" > $tmp/secGrpRule ;
+  execute $thisDir/idemSecGrpRule.sh "$secGrpIdNas" "445" "tcp" "$myIpv4" > $tmp/secGrpRule ;
+  # NFS:
+  execute $thisDir/idemSecGrpRule.sh "$secGrpIdNas" "111" "udp" "$myIpv4" > $tmp/secGrpRule ;
+  execute $thisDir/idemSecGrpRule.sh "$secGrpIdNas" "111" "tcp" "$myIpv4" > $tmp/secGrpRule ;
+  execute $thisDir/idemSecGrpRule.sh "$secGrpIdNas" "2049" "udp" "$myIpv4" > $tmp/secGrpRule ;
+  execute $thisDir/idemSecGrpRule.sh "$secGrpIdNas" "2049" "tcp" "$myIpv4" > $tmp/secGrpRule ;
+
+# if [[ '1' ]] ; then
   execute $thisDir/idemSecGrpRule.sh "$secGrpId" "22" "tcp" "$myIpv4" > $tmp/secGrpRule ;
   export secGrpRuleTmp=`cat $tmp/secGrpRule ` ;
   echo "Success. secGrpRuleTmp=$secGrpRuleTmp" ;
 # fi ;
 
+  
 if [[ '1' ]] ; then
   execute $thisDir/findAmi.sh > $tmp/findAmi ;
   export findAmiTmp=`cat $tmp/findAmi ` ;
   echo "Success. findAmiTmp=$findAmiTmp" ;
 fi ;
+
+  nasIp='12.3.4.6' ;
+  nasSecGrp='cliDemoSG_NAS' ;
   
 if [[ '1' ]] ; then
   execute $thisDir/idemKeyPair.sh "$keyPairName" > $tmp/keyPair ;
@@ -149,6 +174,16 @@ if [[ '1' ]] ; then
   export instanceId=`cat $tmp/instanceId ` ;
   echo "Success. instanceId=$instanceId" ;
 fi ;
+
+#
+  execute $thisDir/idemInstance.sh "$vpcId" "$subnetId" "$secGrpIdNas" "$keyPairName" "$USE_EC2_AMI" \
+    "$nasIp" "false" > $tmp/instanceId ;
+    #
+  #
+  export nasInstance=`cat $tmp/instanceId ` ;
+#
+#
+#
 
 echo "Success." ;
 exit 0 ;

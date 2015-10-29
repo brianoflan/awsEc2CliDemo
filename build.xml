@@ -48,17 +48,17 @@
         </exec>
         <property name="ec2Url" value="https://${ec2RegionUrlDomain}" />
 
-        <echo message="mkSecGroup.sh" />
-        <chmod file="${basedir}/scripts/mkSecGroup.sh" perm="ug+rx" />
+        <echo message="ec2Demo.sh" />
+        <chmod file="${basedir}/scripts/ec2Demo.sh" perm="ug+rx" />
         <!--
-        <exec executable="${basedir}/scripts/mkSecGroup.sh" 
+        <exec executable="${basedir}/scripts/ec2Demo.sh" 
         <exec executable="bash" 
             <arg value="-c" />
-            <arg value="${basedir}/scripts/mkSecGroup.sh" />
+            <arg value="${basedir}/scripts/ec2Demo.sh" />
         -->
-        <exec executable="${basedir}/scripts/mkSecGroup.sh" 
-          output="${basedir}/build/mkSecGroup.out"
-          error="${basedir}/build/mkSecGroup.err"
+            <exec executable="${basedir}/scripts/ec2Demo.sh" 
+          output="${basedir}/build/ec2Demo.out"
+          error="${basedir}/build/ec2Demo.err"
           failonerror="true"
           >
             

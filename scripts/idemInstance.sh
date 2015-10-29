@@ -151,6 +151,7 @@ else
   if [[ $error -gt 0 ]] ; then
     echo "Error (non-zero exit code) from command: '$error'." ;
   fi ;
+  sleep 120 ; # Takes a certain amount of time to spin up a new instance.  Hate to accidentally run this idempotent script before it was warm.
 fi ;
 echo "  DEBUG: Instance = {$alreadyInstance}." 1>&2 ;
 instanceId=`echo $alreadyInstance | perl -ne '/(^|\s)INSTANCE\s+(i[\-]\S+)(\s|$)/ && print $2' ` ;
