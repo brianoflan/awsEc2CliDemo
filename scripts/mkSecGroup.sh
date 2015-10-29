@@ -77,7 +77,11 @@ function execute {
 
 # # http://docs.aws.amazon.com/AWSEC2/latest/CommandLineReference/ApiReference-cmd-RunInstances.html
 # if [[ '1' ]] ; then
-alreadyVpc=`execute ec2-describe-vpcs -F "cidr=$vpcCidr" ` ;
+# alreadyVpc=`ec2-describe-vpcs -F "cidr=$vpcCidr" ` ;
+# alreadyVpc=`execute ec2-describe-vpcs -F "cidr=$vpcCidr" ` ;
+# execute alreadyVpc=`ec2-describe-vpcs -F "cidr=$vpcCidr" ` ;
+execute ec2-describe-vpcs -F "cidr=$vpcCidr" > $tmp/vpcs ;
+alreadyVpc=`cat $tmp/vpcs` ;
 if [[ $alreadyVpc ]] ; then
   echo "Already a VPC." ;
 else
@@ -97,6 +101,8 @@ echo "  DEBUG: VPC ID = {$vpcId}."
 # # http://docs.aws.amazon.com/AWSEC2/latest/CommandLineReference/ApiReference-cmd-DescribeSubnets.html
 # # http://docs.aws.amazon.com/AWSEC2/latest/CommandLineReference/ApiReference-cmd-CreateSubnet.html
 alreadySubnet=`ec2-describe-subnets -F "vpc-id=$vpcId" -F "cidrBlock=$vpcSubnetCidr" ` ;
+execute ec2-describe-subnets -F "vpc-id=$vpcId" -F "cidrBlock=$vpcSubnetCidr" > $tmp/subnets ;
+alreadySubnet=`cat $tmp/subnets ` ;
 if [[ $alreadySubnet ]] ; then
   echo "Already a subnet." ;
 else
@@ -117,29 +123,29 @@ echo "  DEBUG: Subnet ID = {$subnetId}."
 # aws ec2 describe-security-groups --group-names $USE_THIS_SEC_GRP
 # http://docs.aws.amazon.com/AWSEC2/latest/CommandLineReference/ApiReference-cmd-DescribeSecurityGroups.html
 ec2-describe-group -F "vpc-id=$vpcId" > $f ;
-echo "Debug the list of groups:";
+echo "  Debug the list of groups:";
 # egrep '^GROUP' $f | awk '{print $2 "" $3}' ;
 egrep '^GROUP' $f ;
 egrep '^GROUP' $f | awk -F $'\t' '{print $2 " " $4}' ;
 echo ;
 alreadyExists=$(egrep '^GROUP' $f | awk '{print $2 " " $4}' | perl -ne "/\\Q$USE_THIS_SEC_GRP\\E/ && print $_" ) ;
-echo "alreadyExists: q{$alreadyExists}"
+echo "  alreadyExists: q{$alreadyExists}"
 
 if [[ -z $alreadyExists ]] ; then
-  echo "Creating group $USE_THIS_SEC_GRP" ;
-  tmpO=`ec2-create-group $USE_THIS_SEC_GRP -d "$groupDesc" -c $vpcId && echo $? ` ;
-  echo "tmp0: q{$tmpO}" ;
+  echo "  Creating group $USE_THIS_SEC_GRP" ;
+  tmp0=`ec2-create-group $USE_THIS_SEC_GRP -d "$groupDesc" -c $vpcId && echo $? ` ;
+  echo "  tmp0: q{$tmp0}" ;
   # alreadyExists=$(echo "$tmp0" | awk '{print $2 "" $3}' | perl -ne "/\\Q$USE_THIS_SEC_GRP\\E/ && print $_" ) ;
   alreadyExists="$tmp0" ;
 else
-  echo "Already exists."
+  echo "Already a security group ($USE_THIS_SEC_GRP)."
 fi ;
 
 # export secgrpid=`echo "$alreadyExists" | awk '{print $1}'` ;
 export secgrpid=`echo "$alreadyExists" | perl -ne '/(^|\s)(sg[\-]\S+)(\s|$)/ && print $2' ` ;
 echo "secgrpid = '$secgrpid'" ;
 if [[ -z $secgrpid ]] ; then
-  echo "ERROR: Failed to determine security group id." 1>&2 ;
+  echo "ERROR: Failed to determine security group id (from '${alreadyExists}')." 1>&2 ;
   exit 1 ;
 fi ;
 
@@ -150,14 +156,17 @@ cat $f | perl $thisDir/listRules.pl > $tmp/sgRules.txt 2> $tmp/sgRules.err ;
 # alreadyARule=`cat $tmp/sgRules.txt | grep ingress | egrep "ALLOWS[ \t][ \t]*tcp[ \t]22[ \t]" ` ;
 alreadyARule=`cat $tmp/sgRules.txt | grep ingress | perl -ne '/ALLOWS\s+tcp\s+22\s/ && print $_' ` ;
 if [[ $alreadyARule ]] ; then
-  echo "TCP 22 is already a rule."
+  # echo "TCP 22 is already a rule."
+  echo "Already a rule (TCP 22)."
 else
-  cmdX="ec2-authorize $USE_THIS_SEC_GRP -P tcp -p 22 -s ${myIpv4}/24" ;
-  echo "Cmd: $cmdX" ;
+
+  # cmdX="ec2-authorize $USE_THIS_SEC_GRP -P tcp -p 22 -s ${myIpv4}/24" ;
+  cmdX="ec2-authorize $secgrpid -P tcp -p 22 -s ${myIpv4}/24" ;
+  echo "  Cmd: $cmdX" ;
   error='' ;
   $cmdX ; error=$? ;
   if [[ $error -gt 0 ]] ; then
-    echo "Error (non-zero exit code) from command." ;
+    echo "  Error (non-zero exit code, $error) from command." ;
   fi ;
 fi ;
 

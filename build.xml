@@ -50,7 +50,16 @@
 
         <echo message="mkSecGroup.sh" />
         <chmod file="${basedir}/scripts/mkSecGroup.sh" perm="ug+rx" />
-        <exec executable="${basedir}/scripts/mkSecGroup.sh" >
+        <!--
+        <exec executable="${basedir}/scripts/mkSecGroup.sh" 
+        -->
+        <exec executable="bash" 
+          output="${basedir}/build/mkSecGroup.out"
+          error="${basedir}/build/mkSecGroup.err"
+          >
+            <arg value="-c" />
+            <arg value="${basedir}/scripts/mkSecGroup.sh" />
+            
             <env key="AWS_ACCESS_KEY" value="${ec2AccessKey}" />
             <env key="AWS_SECRET_KEY" value="${ec2SecretKey}" />
             <env key="BUILD_DIR" value="${basedir}/${build.dir}" />
