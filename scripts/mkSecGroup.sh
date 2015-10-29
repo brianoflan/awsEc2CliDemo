@@ -3,12 +3,32 @@
 # # http://docs.aws.amazon.com/AWSEC2/latest/CommandLineReference/ec2-cli-launch-instance.html
 # # Valuable but less official: https://www.linux.com/learn/tutorials/761430-an-introduction-to-the-aws-command-line-tool
 
-instancePrivateIp='12.3.4.5' ;
-vpcCidr='12.3.0.0/16' ;
-# vpcSubnetCidr='12.3.128.0/17' ;
-vpcSubnetCidr='12.3.0.0/17' ;
-keyPairName='cliDemo1_keyPair1'
-groupDesc="Basic Security Group for Amazon EC2 demo 1." ;
+if [[ -z $secGrpRule_useExclusiveIp ]] ; then
+  $secGrpRule_useExclusiveIp='1' ;
+fi ;
+if [[ -z $instancePrivateIp ]] ; then
+  instancePrivateIp='12.3.4.5' ;
+fi ;
+if [[ -z $vpcCidr ]] ; then
+  export vpcCidr='12.3.0.0/16' ;
+fi ;
+if [[ -z $subnetCidr ]] ; then
+  # subnetCidr='12.3.128.0/17' ;
+  export subnetCidr='12.3.0.0/17' ;
+fi ;
+if [[ -z $subnetCidr ]] ; then
+  export subnetCidr=$vpcCidr ;
+fi ;
+if [[ -z $keyPairName ]] ; then
+  keyPairName='cliDemo1_keyPair1'
+fi ;
+if [[ -z $secGrpDesc ]] ; then
+  secGrpDesc="Basic Security Group for Amazon EC2 demo 1." ;
+fi ;
+
+if [[ -z $DO_CLEAN ]] ; then
+  export DO_CLEAN="false" ;
+fi ;
 
 if [[ -z $USE_EC2_AMI ]] ; then
   # # export USE_EC2_AMI=ami-cf1066aa ; # us-east-1 region ?
@@ -29,147 +49,98 @@ fi ;
 
 tmp=$BUILD_DIR/tmp ;
 f=$tmp/awsEc2SecGroups.txt ;
-
-# # # BEGIN thisDir
-thisDir=$(dirname $0) ;
-pwdX=$(pwd) ;
-abs=`dirname $0 | sed -e 's/^\(.\).*$/\1/'` ;
-if [[ -z $thisDir || "$thisDir" == "." ]] ; then
-  thisDir="$pwdX" ;
-else
-  if [[ "$abs" != "/" ]] ; then
-    thisDir="$pwdX/$thisDir" ;
-  fi ;
-fi ;
-scriptBase=$(basename $0) ;
-# cd $thisDir ;
-# # # END thisDir
-
 if [[ ! -d $tmp ]] ; then
   mkdir $tmp ;
 fi ;
 
 
-# # # BEGIN execute
-
-if [[ -z $DEBUG ]] ; then
-  DEBUG='' ;
-fi ;
-function execute {
-  cmdX="$@" ;
-  if [[ $DEBUG -gt 0 ]] ; then
-    echo "execute $@" 1>&2 ;
-  fi ;
-  "$@" ;
-  error=$? ;
-  if [[ -z $error || "$error" == "" || "$error" == "0" ]] ; then
-    true ;
+# # # BEGIN thisDir
+  thisDir=$(dirname $0) ;
+  pwdX=$(pwd) ;
+  abs=`dirname $0 | sed -e 's/^\(.\).*$/\1/'` ;
+  if [[ -z $thisDir || "$thisDir" == "." ]] ; then
+    thisDir="$pwdX" ;
   else
-    echo "ERROR: From command $cmdX: '$error'." 1>&2 ;
-    exit $error ;
+    if [[ "$abs" != "/" ]] ; then
+      thisDir="$pwdX/$thisDir" ;
+    fi ;
   fi ;
-}
-
+  scriptBase=$(basename $0) ;
+  # cd $thisDir ;
+# # # END thisDir
+# # # BEGIN execute
+  if [[ -z $DEBUG ]] ; then
+    DEBUG='' ;
+  fi ;
+  function execute {
+    cmdX="$@" ;
+    if [[ $DEBUG -gt 0 ]] ; then
+      echo "execute $@" 1>&2 ;
+    fi ;
+    "$@" ;
+    error=$? ;
+    if [[ -z $error || "$error" == "" || "$error" == "0" ]] ; then
+      true ;
+    else
+      echo "ERROR: From command $cmdX: '$error'." 1>&2 ;
+      exit $error ;
+    fi ;
+  }
 # # # END execute
 
 
 # # # MAIN
 
+echo > $BUILD_DIR/source_me.sh ;
+for x in AWS_ACCESS_KEY AWS_SECRET_KEY EC2_HOME EC2_URL JAVA_HOME PATH CLASSPATH ; do
+  eval "echo \"$x=$$x\"" >> $BUILD_DIR/source_me.sh ;
+done ;
+
 # if [[ '1' ]] ; then
-  execute $thisDir/idemVpc.sh cidr "$vpcCidr" ;
+  execute $thisDir/idemVpc.sh cidr "$vpcCidr" > $tmp/vpcId ;
+  export vpcId=`cat $tmp/vpcId` ;
 # fi ;
 
-# # http://docs.aws.amazon.com/AWSEC2/latest/CommandLineReference/ApiReference-cmd-DescribeSubnets.html
-# # http://docs.aws.amazon.com/AWSEC2/latest/CommandLineReference/ApiReference-cmd-CreateSubnet.html
-alreadySubnet=`ec2-describe-subnets -F "vpc-id=$vpcId" -F "cidrBlock=$vpcSubnetCidr" ` ;
-execute ec2-describe-subnets -F "vpc-id=$vpcId" -F "cidrBlock=$vpcSubnetCidr" > $tmp/subnets ;
-alreadySubnet=`cat $tmp/subnets ` ;
-if [[ $alreadySubnet ]] ; then
-  echo "Already a subnet." ;
+# if [[ '1' ]] ; then
+  # execute $thisDir/idemSubnet.sh "$vpcCidr" "$subnetCidr" > $tmp/subnetId ;
+  execute $thisDir/idemSubnet.sh "$vpcId" "$subnetCidr" > $tmp/subnetId ;
+  export subnetId=`cat $tmp/subnetId ` ;
+# fi ;
+
+# if [[ '1' ]] ; then
+  secGrpName=$USE_THIS_SEC_GRP ;
+  execute $thisDir/idemSecGrp.sh "$vpcId" "$secGrpName" "$secGrpDesc" > $tmp/secGrpId ;
+  export secGrpId=`cat $tmp/secGrpId ` ;
+  # echo "Success. secGrpId=$secGrpId" ;
+# fi ;
+
+if [[ $secGrpRule_useExclusiveIp ]] ; then
+  execute ifconfig > $tmp/ifconfig ;
+  myIpv4=`cat $tmp/ifconfig | grep 'inet addr' | grep -v '127\.0\.0\.1' ` ;
+  myIpv4=`echo "$myIpv4" | grep Bcast | awk '{print $2}' | awk -F: '{print $2}' | head -1` ;
 else
-  cmdX="ec2-create-subnet -c $vpcId -i $vpcSubnetCidr" ;
-  echo "Cmd: $cmdX" ;
-  error='' ;
-  alreadySubnet=`$cmdX` ; error=$? ;
-  if [[ $error -gt 0 ]] ; then
-    echo "Error (non-zero exit code) from command: '$error'." ;
-  fi ;
-  sleep 60 ;
-fi ;
-echo "  DEBUG: Subnet = {$alreadySubnet}."
-subnetId=`echo $alreadySubnet | perl -ne '/(^|\s)(subnet[\-]\S+)(\s|$)/ && print $2' ` ;
-echo "  DEBUG: Subnet ID = {$subnetId}."
-
-# # http://docs.aws.amazon.com/cli/latest/userguide/cli-ec2-sg.html
-# aws ec2 describe-security-groups --group-names $USE_THIS_SEC_GRP
-# http://docs.aws.amazon.com/AWSEC2/latest/CommandLineReference/ApiReference-cmd-DescribeSecurityGroups.html
-ec2-describe-group -F "vpc-id=$vpcId" > $f ;
-echo "  Debug the list of groups:";
-# egrep '^GROUP' $f | awk '{print $2 "" $3}' ;
-egrep '^GROUP' $f ;
-egrep '^GROUP' $f | awk -F $'\t' '{print $2 " " $4}' ;
-echo ;
-alreadyExists=$(egrep '^GROUP' $f | awk '{print $2 " " $4}' | perl -ne "/\\Q$USE_THIS_SEC_GRP\\E/ && print $_" ) ;
-echo "  alreadyExists: q{$alreadyExists}"
-
-if [[ -z $alreadyExists ]] ; then
-  echo "  Creating group $USE_THIS_SEC_GRP" ;
-  tmp0=`ec2-create-group $USE_THIS_SEC_GRP -d "$groupDesc" -c $vpcId && echo $? ` ;
-  echo "  tmp0: q{$tmp0}" ;
-  # alreadyExists=$(echo "$tmp0" | awk '{print $2 "" $3}' | perl -ne "/\\Q$USE_THIS_SEC_GRP\\E/ && print $_" ) ;
-  alreadyExists="$tmp0" ;
-else
-  echo "Already a security group ($USE_THIS_SEC_GRP)."
+  myIpv4='' ;
 fi ;
 
-# export secgrpid=`echo "$alreadyExists" | awk '{print $1}'` ;
-export secgrpid=`echo "$alreadyExists" | perl -ne '/(^|\s)(sg[\-]\S+)(\s|$)/ && print $2' ` ;
-echo "secgrpid = '$secgrpid'" ;
-if [[ -z $secgrpid ]] ; then
-  echo "ERROR: Failed to determine security group id (from '${alreadyExists}')." 1>&2 ;
-  exit 1 ;
-fi ;
-
-myIpv4=`ifconfig | grep 'inet addr' | grep -v '127\.0\.0\.1' | grep Bcast | awk '{print $2}' | awk -F: '{print $2}' | head -1` ;
-
-cat $f | perl $thisDir/listRules.pl > $tmp/sgRules.txt 2> $tmp/sgRules.err ;
-
-# alreadyARule=`cat $tmp/sgRules.txt | grep ingress | egrep "ALLOWS[ \t][ \t]*tcp[ \t]22[ \t]" ` ;
-alreadyARule=`cat $tmp/sgRules.txt | grep ingress | perl -ne '/ALLOWS\s+tcp\s+22\s/ && print $_' ` ;
-if [[ $alreadyARule ]] ; then
-  # echo "TCP 22 is already a rule."
-  echo "Already a rule (TCP 22)."
-else
-
-  # cmdX="ec2-authorize $USE_THIS_SEC_GRP -P tcp -p 22 -s ${myIpv4}/24" ;
-  cmdX="ec2-authorize $secgrpid -P tcp -p 22 -s ${myIpv4}/24" ;
-  echo "  Cmd: $cmdX" ;
-  error='' ;
-  $cmdX ; error=$? ;
-  if [[ $error -gt 0 ]] ; then
-    echo "  Error (non-zero exit code, $error) from command." ;
-  fi ;
-fi ;
+# if [[ '1' ]] ; then
+  execute $thisDir/idemSecGrpRule.sh "$secGrpId" "22" "tcp" "$myIpv4" > $tmp/secGrpRule ;
+  export secGrpRuleTmp=`cat $tmp/secGrpRule ` ;
+  echo "Success. secGrpRuleTmp=$secGrpRuleTmp" ;
+# fi ;
 
 if [[ '1' ]] ; then
-  # cmdX="ec2-describe-images -a -o amazon --filter \"is-public=true\" -F \"architecture=x86_64\" --filter \"platform=linux\" " ;
-  # cmdX="ec2-describe-images -o amazon --filter \"is-public=true\" -F \"architecture=x86_64\" --filter \"platform=linux\" " ;
-  #   -F \"root-device-type=instance-store\" \
-  #   -F \"virtualization-type=paravirtual\" \
-  cmdX="ec2-describe-images -o amazon -F \"is-public=true\" -F \"image-type=machine\" \
-    -F \"architecture=x86_64\" \
-    -F \"virtualization-type=hvm\" \
-    -F \"root-device-type=ebs\" \
-    " ;
-  true ;
-  echo "Cmd: $cmdX" ;
-  error='' ;
-  $cmdX | egrep -vi '(BLOCKDEVICEMAPPING|elasticbeanstalk|minimal|suse|windows)' | egrep '2015[\-]09' > $tmp/images.txt ; error=$? ;
-  if [[ $error -gt 0 ]] ; then
-    echo "Error (non-zero exit code) from command." ;
-  fi ;
-  cat $tmp/images.txt ;
-  cat $tmp/images.txt | wc -l ;
+  execute $thisDir/findAmi.sh > $tmp/findAmi ;
+  export findAmiTmp=`cat $tmp/findAmi ` ;
+  echo "Success. findAmiTmp=$findAmiTmp" ;
+fi ;
+  
+  echo "Success." ;
+  exit 0 ;
+
+if [[ '1' ]] ; then
+  execute $thisDir/idemKeyPair.sh "$keyPairName" > $tmp/keyPair ;
+  export keyPairTmp=`cat $tmp/keyPair ` ;
+  echo "Success. keyPairTmp=$keyPairTmp" ;
 fi ;
 
 # # http://docs.aws.amazon.com/cli/latest/userguide/cli-ec2-keypairs.html

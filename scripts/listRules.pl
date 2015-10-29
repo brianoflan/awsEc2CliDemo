@@ -1,7 +1,7 @@
 use strict ; 
 use warnings ;
-my $secgrpid = $ENV{'secgrpid'} ;
-print STDERR "secgrpid='${secgrpid}'.\n" ;
+my $secGrpId = $ENV{'secGrpId'} ;
+print STDERR "secGrpId='${secGrpId}'.\n" ;
 my $never = 1 ;
 my $rightGroup = '' ;
 while (<>) {
@@ -12,12 +12,12 @@ while (<>) {
         print $_ ;
       }
   } else { 
-    if ( /^\s*GROUP\s+\Q$secgrpid\E/ ) {
+    if ( /^\s*GROUP\s+\Q$secGrpId\E/ ) {
       $rightGroup = 1;
       $never = '' ;
     } 
   } 
 }
 if ( $never ) {
-  print STDERR "ERROR: Never found secgrpid '$secgrpid'.\n" ;
+  print STDERR "ERROR: Never found secGrpId '$secGrpId'.\n" ;
 }
