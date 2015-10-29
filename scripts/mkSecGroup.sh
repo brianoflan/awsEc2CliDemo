@@ -143,45 +143,17 @@ if [[ '1' ]] ; then
   echo "Success. keyPairTmp=$keyPairTmp" ;
 fi ;
 
-# # http://docs.aws.amazon.com/cli/latest/userguide/cli-ec2-keypairs.html
-alreadyAKeypair=`ls -d $tmp/keyPairPrivate.pem` ;
-if [[ $alreadyAKeypair ]] ; then
-  echo "Already have a key pair."
-else
-  cmdX="ec2-create-keypair $keyPairName" ;
-  echo "Cmd: $cmdX" ;
-  error='' ;
-  $cmdX > $tmp/keyPairOutput.txt ; error=$? ;
-  if [[ $error -gt 0 ]] ; then
-    echo "Error (non-zero exit code) from command." ;
-  fi ;
-  sed '1d' $tmp/keyPairOutput.txt > $tmp/keyPairPrivate.pem ;
-  chmod 400 $tmp/keyPair* ;
+if [[ '1' ]] ; then
+  doAssociatePublicIpAddress=true ;
+  execute $thisDir/idemInstance.sh "$vpcId" "$subnetId" "$secGrpId" "$keyPairName" "$USE_EC2_AMI" \
+    "$instancePrivateIp" "$doAssociatePublicIpAddress" > $tmp/instanceId ;
+    #
+  #
+  export instanceId=`cat $tmp/instanceId ` ;
+  echo "Success. instanceId=$instanceId" ;
 fi ;
-alreadyAKeypair=`ls -d $tmp/keyPairPrivate.pem` ;
-echo "alreadyAKeypair = '$alreadyAKeypair'" ;
 
-# # http://docs.aws.amazon.com/AWSEC2/latest/CommandLineReference/ApiReference-cmd-DescribeInstances.html
-# # http://docs.aws.amazon.com/AWSEC2/latest/CommandLineReference/ApiReference-cmd-RunInstances.html
-alreadyInstance=`ec2-describe-instances -F "vpc-id=$vpcId" -F "subnet-id=$subnetId" ` ;
-if [[ $alreadyInstance ]] ; then
-  echo "Already an instance." ;
-else
-  cmdX="ec2-run-instances $USE_EC2_AMI -k $keyPairName -g $secgrpid \
-    -t $INSTANCE_TYPE -s $subnetId --private-ip-address $instancePrivateIp \
-    --associate-public-ip-address true
-    " ;
-  true ;
-  echo "Cmd: $cmdX" ;
-  error='' ;
-  alreadyInstance=`$cmdX` ; error=$? ;
-  if [[ $error -gt 0 ]] ; then
-    echo "Error (non-zero exit code) from command: '$error'." ;
-  fi ;
-fi ;
-echo "  DEBUG: Instance = {$alreadyInstance}."
-instanceId=`echo $alreadyInstance | perl -ne '/(^|\s)INSTANCE\s+(i[\-]\S+)(\s|$)/ && print $2' ` ;
-echo "  DEBUG: Instance ID = {$instanceId}."
+
 
 # 
 

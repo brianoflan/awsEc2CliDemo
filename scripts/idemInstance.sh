@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # # # USAGE:
-# # #  idemInstance.sh
-# # #                    $1        $2              $3                  $4                     $5
+# # #  idemInstance.sh $vpcId $subnetId $secGrpId $keyPairName $ec2_ami $instancePrivateIp $trueFalseAssociatePublicIpAddress
+# # #                  $1     $2        $3        $4           $5       $6                 $7
 
 
 # XXX
@@ -146,6 +146,31 @@ else
     exit $error ;
   fi ;
 fi ;
+
+# # http://docs.aws.amazon.com/AWSEC2/latest/CommandLineReference/ApiReference-cmd-DescribeInstances.html
+# # http://docs.aws.amazon.com/AWSEC2/latest/CommandLineReference/ApiReference-cmd-RunInstances.html
+alreadyInstance=`ec2-describe-instances -F "vpc-id=$vpcId" -F "subnet-id=$subnetId" ` ;
+if [[ $alreadyInstance ]] ; then
+  echo "Already an instance." ;
+else
+  cmdX="ec2-run-instances $USE_EC2_AMI -k $keyPairName -g $secGrpId \
+    -t $INSTANCE_TYPE -s $subnetId --private-ip-address $instancePrivateIp \
+    --associate-public-ip-address true
+    " ;
+  true ;
+  echo "Cmd: $cmdX" ;
+  error='' ;
+  alreadyInstance=`$cmdX` ; error=$? ;
+  if [[ $error -gt 0 ]] ; then
+    echo "Error (non-zero exit code) from command: '$error'." ;
+  fi ;
+fi ;
+echo "  DEBUG: Instance = {$alreadyInstance}."
+instanceId=`echo $alreadyInstance | perl -ne '/(^|\s)INSTANCE\s+(i[\-]\S+)(\s|$)/ && print $2' ` ;
+echo "  DEBUG: Instance ID = {$instanceId}."
+
+
+#
 
 exit 0 ;
 
