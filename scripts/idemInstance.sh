@@ -4,58 +4,75 @@
 # # #  idemInstance.sh $vpcId $subnetId $secGrpId $keyPairName $ec2_ami $instancePrivateIp $trueFalseAssociatePublicIpAddress
 # # #                  $1     $2        $3        $4           $5       $6                 $7
 
-
-# XXX
-
-defaultPort=22 ;
-defaultProtocol='tcp' ;
-defaultXIp='' ;
-defaultXIpCidrLeadingBits=24 ;
+defaultDoAssociatePublicIp='false' ;
 
 if [[ -z $1 ]] ; then
-  if [[ -z $secGrpId ]] ; then
+  if [[ -z $vpcId ]] ; then
     echo "ERROR:  Inadequate args"'!' 1>&2 ;
-    echo " Usage:  idemSecGrpRule.sh \$secGrpId" 1>&2 ;
+    echo " Usage:  idemInstance.sh \$vpcId \$subnetId \$secGrpId \$keyPairName \$ec2_ami \$instancePrivateIp \$trueFalseAssociatePublicIpAddress" 1>&2 ;
     exit 1 ;
   fi ;
 else
-  export secGrpId=$1 ;
+  export vpcId=$1 ;
 fi ;
 
 if [[ -z $2 ]] ; then
-  if [[ -z $secGrpRulePort ]] ; then
-    export secGrpRulePort="$defaultPort"
-    echo "WARNING:  No port specified, assuming port 22." 1>&2 ;
+  if [[ -z $subnetId ]] ; then
+    echo "ERROR:  Inadequate args"'!' 1>&2 ;
+    echo " Usage:  idemInstance.sh \$vpcId \$subnetId \$secGrpId \$keyPairName \$ec2_ami \$instancePrivateIp \$trueFalseAssociatePublicIpAddress" 1>&2 ;
+    exit 1 ;
   fi ;
 else
-  export secGrpRulePort=$2 ;
+  export subnetId=$2 ;
 fi ;
 
 if [[ -z $3 ]] ; then
-  if [[ -z $secGrpRuleProtocol ]] ; then
-    export secGrpRuleProtocol="$defaultProtocol"
+  if [[ -z $secGrpId ]] ; then
+    echo "ERROR:  Inadequate args"'!' 1>&2 ;
+    echo " Usage:  idemInstance.sh \$vpcId \$subnetId \$secGrpId \$keyPairName \$ec2_ami \$instancePrivateIp \$trueFalseAssociatePublicIpAddress" 1>&2 ;
+    exit 1 ;
   fi ;
 else
-  export secGrpRuleProtocol=$3 ;
+  export secGrpId=$3 ;
 fi ;
 
 if [[ -z $4 ]] ; then
-  if [[ -z $secGrpRuleExclusiveIp ]] ; then
-    export secGrpRuleExclusiveIp="$defaultXIp"
+  if [[ -z $keyPairName ]] ; then
+    echo "ERROR:  Inadequate args"'!' 1>&2 ;
+    echo " Usage:  idemInstance.sh \$vpcId \$subnetId \$secGrpId \$keyPairName \$ec2_ami \$instancePrivateIp \$trueFalseAssociatePublicIpAddress" 1>&2 ;
+    exit 1 ;
   fi ;
 else
-  export secGrpRuleExclusiveIp=$4 ;
+  export keyPairName=$4 ;
 fi ;
 
 if [[ -z $5 ]] ; then
-  if [[ -z $secGrpRuleXIpCidrBits ]] ; then
-    export secGrpRuleXIpCidrBits="$defaultXIpCidrLeadingBits"
+  if [[ -z $ec2_ami ]] ; then
+    echo "ERROR:  Inadequate args"'!' 1>&2 ;
+    echo " Usage:  idemInstance.sh \$vpcId \$subnetId \$secGrpId \$keyPairName \$ec2_ami \$instancePrivateIp \$trueFalseAssociatePublicIpAddress" 1>&2 ;
+    exit 1 ;
   fi ;
 else
-  export secGrpRuleXIpCidrBits=$5 ;
+  export ec2_ami=$5 ;
 fi ;
 
-myIpv4Cidr="$secGrpRuleExclusiveIp/$secGrpRuleXIpCidrBits" ;
+if [[ -z $6 ]] ; then
+  if [[ -z $instancePrivateIp ]] ; then
+    echo "ERROR:  Inadequate args"'!' 1>&2 ;
+    echo " Usage:  idemInstance.sh \$vpcId \$subnetId \$secGrpId \$keyPairName \$ec2_ami \$instancePrivateIp \$trueFalseAssociatePublicIpAddress" 1>&2 ;
+    exit 1 ;
+  fi ;
+else
+  export instancePrivateIp=$6 ;
+fi ;
+
+if [[ -z $7 ]] ; then
+  if [[ -z $trueFalseAssociatePublicIpAddress ]] ; then
+    export trueFalseAssociatePublicIpAddress="$defaultDoAssociatePublicIp"
+  fi ;
+else
+  export trueFalseAssociatePublicIpAddress=$7 ;
+fi ;
 
 
 if [[ -z $DO_CLEAN ]] ; then
@@ -89,7 +106,6 @@ fi ;
   scriptBase=$(basename $0) ;
   # cd $thisDir ;
 # # # END thisDir
-
 # # # BEGIN execute
   if [[ -z $DEBUG ]] ; then
     DEBUG='' ;
@@ -149,13 +165,15 @@ fi ;
 
 # # http://docs.aws.amazon.com/AWSEC2/latest/CommandLineReference/ApiReference-cmd-DescribeInstances.html
 # # http://docs.aws.amazon.com/AWSEC2/latest/CommandLineReference/ApiReference-cmd-RunInstances.html
-alreadyInstance=`ec2-describe-instances -F "vpc-id=$vpcId" -F "subnet-id=$subnetId" ` ;
+# alreadyInstance=`ec2-describe-instances -F "vpc-id=$vpcId" -F "subnet-id=$subnetId" ` ;
+alreadyInstance=`ec2-describe-instances -F "vpc-id=$vpcId" -F "subnet-id=$subnetId" -F "private-ip-address=$instancePrivateIp" ` ;
 if [[ $alreadyInstance ]] ; then
   echo "Already an instance." ;
 else
-  cmdX="ec2-run-instances $USE_EC2_AMI -k $keyPairName -g $secGrpId \
+# # #  idemInstance.sh $vpcId $subnetId $secGrpId $keyPairName $ec2_ami $instancePrivateIp $trueFalseAssociatePublicIpAddress
+  cmdX="ec2-run-instances $ec2_ami -k $keyPairName -g $secGrpId \
     -t $INSTANCE_TYPE -s $subnetId --private-ip-address $instancePrivateIp \
-    --associate-public-ip-address true
+    --associate-public-ip-address $trueFalseAssociatePublicIpAddress
     " ;
   true ;
   echo "Cmd: $cmdX" ;
@@ -165,9 +183,10 @@ else
     echo "Error (non-zero exit code) from command: '$error'." ;
   fi ;
 fi ;
-echo "  DEBUG: Instance = {$alreadyInstance}."
+echo "  DEBUG: Instance = {$alreadyInstance}." 1>&2 ;
 instanceId=`echo $alreadyInstance | perl -ne '/(^|\s)INSTANCE\s+(i[\-]\S+)(\s|$)/ && print $2' ` ;
-echo "  DEBUG: Instance ID = {$instanceId}."
+echo "  DEBUG: Instance ID = {$instanceId}." 1>&2 ;
+echo "$instanceId" ;
 
 
 #
