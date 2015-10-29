@@ -75,28 +75,9 @@ function execute {
 
 # # # MAIN
 
-# # http://docs.aws.amazon.com/AWSEC2/latest/CommandLineReference/ApiReference-cmd-RunInstances.html
 # if [[ '1' ]] ; then
-# alreadyVpc=`ec2-describe-vpcs -F "cidr=$vpcCidr" ` ;
-# alreadyVpc=`execute ec2-describe-vpcs -F "cidr=$vpcCidr" ` ;
-# execute alreadyVpc=`ec2-describe-vpcs -F "cidr=$vpcCidr" ` ;
-execute ec2-describe-vpcs -F "cidr=$vpcCidr" > $tmp/vpcs ;
-alreadyVpc=`cat $tmp/vpcs` ;
-if [[ $alreadyVpc ]] ; then
-  echo "Already a VPC." ;
-else
-  cmdX="ec2-create-vpc $vpcCidr" ;
-  echo "Cmd: $cmdX" ;
-  error='' ;
-  alreadyVpc=`$cmdX` ; error=$? ;
-  if [[ $error -gt 0 ]] ; then
-    echo "Error (non-zero exit code) from command: '$error'." ;
-  fi ;
-  sleep 60 ;
-fi ;
-echo "  DEBUG: VPC = {$alreadyVpc}."
-vpcId=`echo $alreadyVpc | perl -ne '/(^|\s)(vpc[\-]\S+)(\s|$)/ && print $2' ` ;
-echo "  DEBUG: VPC ID = {$vpcId}."
+  execute $thisDir/idemVpc.sh cidr "$vpcCidr" ;
+# fi ;
 
 # # http://docs.aws.amazon.com/AWSEC2/latest/CommandLineReference/ApiReference-cmd-DescribeSubnets.html
 # # http://docs.aws.amazon.com/AWSEC2/latest/CommandLineReference/ApiReference-cmd-CreateSubnet.html
