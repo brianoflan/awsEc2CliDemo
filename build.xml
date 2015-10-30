@@ -5,12 +5,14 @@
     <import file="${pathToSharedBuild}/shared-build.xml" />
     
     <target name="-check-for-tools">
-        <available property="alreadyUnzipped"
-          file="${basedir}/${build.dir}/ec2-api-tools"
-          type="dir"
-        />
+        <condition property="alreadyUnzipped" >
+            <available
+              file="${basedir}/${build.dir}/ec2-api-tools"
+              type="dir"
+            />
+        </condition>
     </target>
-    <target name="-unzip-tools" depends="-check-for-tools" unless="alreadyUnzipped" >
+    <target name="-do-unzip-tools" depends="-check-for-tools" unless="alreadyUnzipped" >
         <!--
         <unzip src="${basedir}/lib/ec2-api-tools.zip"
         -->
@@ -25,15 +27,108 @@
             </mapper>
         </unzip>
     </target>
-    
-    <target name="-compile" depends="-unzip-tools" >
-        <echo message="Demonstrate Amazon EC2 command line power." />
+    <target name="-unzip-tools" depends="-do-unzip-tools" >
         <property name="ec2Home" value="${basedir}/${build.dir}/ec2-api-tools" />
         <chmod dir="${ec2Home}/bin" perm="ug+x" includes="**" >
         </chmod>
         <loadfile property="ec2AccessKey" srcFile="${ec2PrivatesFolder}/access" />
         <loadfile property="ec2SecretKey" srcFile="${ec2PrivatesFolder}/secret" />
+        <path id="ec2.path">
+            <pathelement location="${ec2Home}/bin" />
+        </path>
+        <path id="ec2.classpath">
+          <pathelement location="${basedir}/lib/jar/joda-time.jar" />
+          <fileset dir="${basedir}/${build.dir}/lib">
+            <include name="*.jar"/>
+          </fileset>            
+        </path>
+    </target>
+    
+    <target name="-check-for-tools">
+        <condition property="alreadyUnzipped" >
+            <available
+              file="${basedir}/${build.dir}/ec2-api-tools"
+              type="dir"
+            />
+        </condition>
+    </target>
+    <target name="-do-unzip-tools" depends="-check-for-tools" unless="alreadyUnzipped" >
+        <!--
+        <unzip src="${basedir}/lib/ec2-api-tools.zip"
+        -->
+        <unzip src="${basedir}/lib/tool/ec2-api-tools.zip"
+          dest="${basedir}/${build.dir}/ec2-api-tools"
+          >
+            <patternset>
+                <include name="ec2-api-tools-${ec2ApiToolsRevision}/**"/>
+            </patternset>
+            <mapper>
+                <globmapper from="ec2-api-tools-${ec2ApiToolsRevision}/*" to="*"/>
+            </mapper>
+        </unzip>
+    </target>
+    <target name="-unzip-tools" depends="-do-unzip-tools" >
+        <property name="ec2Home" value="${basedir}/${build.dir}/ec2-api-tools" />
+        <chmod dir="${ec2Home}/bin" perm="ug+x" includes="**" >
+        </chmod>
+        <loadfile property="ec2AccessKey" srcFile="${ec2PrivatesFolder}/access" />
+        <loadfile property="ec2SecretKey" srcFile="${ec2PrivatesFolder}/secret" />
+        <path id="ec2.path">
+            <pathelement location="${ec2Home}/bin" />
+        </path>
+        <path id="ec2.classpath">
+          <pathelement location="${basedir}/lib/jar/joda-time.jar" />
+          <fileset dir="${basedir}/${build.dir}/lib">
+            <include name="*.jar"/>
+          </fileset>            
+        </path>
+    </target>
+    
+    <target name="-compile" depends="-compile1" >
+    <!--
+    <target name="-compile" depends="-compile1, -compile2, -compile3" >
+    -->
+    </target>
+    <target name="-compile1" depends="-unzip-tools" >
+        <echo message="Demonstrate Amazon EC2 command line power." />
         
+        <path id="antpath.newpath" >
+            <path refid="ec2.path" />
+            <pathelement location="${env.JAVA_HOME}/bin" />
+            <pathelement path="${env.PATH}" />
+        </path>
+        <property name="orig.newpath" value="${ec2Home}/bin:${env.JAVA_HOME}/bin:${env.PATH}" />
+        <!--
+            ORIG NEW PATH               '${orig.newpath}'
+            ANT PATH STRUCTURE NEW PATH '${toString:antpath.newpath}'
+        -->
+        <echo>
+            Compare
+        </echo>
+        <mkdir dir="${build.dir}/tmp" />
+        <echo file="${build.dir}/tmp/.orig.newpath" >${orig.newpath}</echo>
+        <echo file="${build.dir}/tmp/.antpath.newpath" >${toString:antpath.newpath}</echo>
+        <exec executable="bash" >
+            <arg value="-c" />
+            <arg value="cat ${build.dir}/tmp/.orig.newpath | tr ':' '\n' > ${build.dir}/tmp/orig.newpath" />
+        </exec>
+        <exec executable="bash" >
+            <arg value="-c" />
+            <arg value="cat ${build.dir}/tmp/.antpath.newpath | tr ':' '\n' > ${build.dir}/tmp/antpath.newpath" />
+        </exec>
+        <exec executable="diff" >
+            <arg value="-dbB" />
+            <arg value="${build.dir}/tmp/orig.newpath" />
+            <arg value="${build.dir}/tmp/antpath.newpath" />
+        </exec>
+        
+        <path id="antpath.newclasspath" >
+            <path refid="ec2.classpath" />
+            <pathelement path="${env.CLASSPATH}" />
+        </path>
+        
+    </target>
+    <target name="-compile2" depends="-unzip-tools" >
         <echo message="ec2-describe-regions" />
         <!--
             <env key="CLASSPATH" value="${basedir}/lib/jar/joda-time.jar:${env.CLASSPATH}" />
@@ -43,11 +138,15 @@
             <env key="AWS_SECRET_KEY" value="${ec2SecretKey}" />
             <env key="JAVA_HOME" value="${env.JAVA_HOME}" />
             <env key="EC2_HOME" value="${ec2Home}" />
-            <env key="PATH" value="${ec2Home}/bin:${env.JAVA_HOME}/bin:${env.PATH}" />
-            <env key="CLASSPATH" value="${basedir}/lib/jar/joda-time.jar:${basedir}/build/ec2-api-tools/lib/*.jar:${env.CLASSPATH}" />
+            <!--env key="PATH" value="${ec2Home}/bin:${env.JAVA_HOME}/bin:${env.PATH}" /-->
+            <env key="PATH"      value="${toString:antpath.newpath}" />
+            <!--env key="CLASSPATH" value="${basedir}/lib/jar/joda-time.jar:${basedir}/build/ec2-api-tools/lib/*.jar:${env.CLASSPATH}" /-->
+            <env key="CLASSPATH" value="${toString:antpath.newclasspath}" />
         </exec>
-        <property name="ec2Url" value="https://${ec2RegionUrlDomain}" />
 
+    </target>
+    <target name="-compile3" depends="-unzip-tools" >
+        <property name="ec2Url" value="https://${ec2RegionUrlDomain}" />
         <echo message="ec2Demo.sh" />
         <chmod file="${basedir}/scripts/ec2Demo.sh" perm="ug+rx" />
         <!--
@@ -69,10 +168,12 @@
             <env key="EC2_URL" value="${ec2Url}" />
             <env key="INSTANCE_TYPE" value="${ec2InstanceType}" />
             <env key="JAVA_HOME" value="${env.JAVA_HOME}" />
-            <env key="PATH" value="${ec2Home}/bin:${env.JAVA_HOME}/bin:${env.PATH}" />
             <env key="USE_EC2_AMI" value="${ec2Ami}" />
             <env key="USE_THIS_SEC_GRP" value="${securityGroup}" />
-            <env key="CLASSPATH" value="${basedir}/lib/jar/joda-time.jar:${basedir}/build/ec2-api-tools/lib/*.jar:${env.CLASSPATH}" />
+            <!--env key="PATH" value="${ec2Home}/bin:${env.JAVA_HOME}/bin:${env.PATH}" /-->
+            <env key="PATH"      value="${toString:antpath.newpath}" />
+            <!--env key="CLASSPATH" value="${basedir}/lib/jar/joda-time.jar:${basedir}/build/ec2-api-tools/lib/*.jar:${env.CLASSPATH}" /-->
+            <env key="CLASSPATH" value="${toString:antpath.newclasspath}" />
         </exec>
 
         <!--

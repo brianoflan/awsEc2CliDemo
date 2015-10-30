@@ -3,6 +3,7 @@
     <publications>
     </publications>    
     <dependencies>
+        <dependency org="io.chef" name="chef-dk" rev="+"/>
         <dependency org="com.amazon.aws" name="ec2-api-tools" rev="+"/>
         <dependency org="org.joda" name="joda-time" rev="+"/>
     </dependencies>
