@@ -4,20 +4,38 @@
     <!--echo message="pathToSharedBuild = ${pathToSharedBuild}" /-->
     <import file="${pathToSharedBuild}/shared-build.xml" />
     
-    <target name="-check-for-tools">
-        <condition property="alreadyUnzipped" >
+    <target name="-check-for-tools-ec2">
+        <condition property="alreadyUnzipped_ec2" >
             <available
-              file="${basedir}/${build.dir}/ec2-api-tools"
+              file="${basedir}/${build.dir}/bin/ec2-api-tools"
               type="dir"
             />
         </condition>
     </target>
-    <target name="-do-unzip-tools" depends="-check-for-tools" unless="alreadyUnzipped" >
+    <target name="-do-unzip-tools-ec2" depends="-check-for-tools-ec2" unless="alreadyUnzipped_ec2" >
+        <mkdir dir="${basedir}/${build.dir}/bin" />
         <!--
         <unzip src="${basedir}/lib/ec2-api-tools.zip"
         -->
+        
+        <!--  -->
+        
+        <!--  
+        <mkdir dir="${basedir}/${build.dir}/bin/tmp" />
         <unzip src="${basedir}/lib/tool/ec2-api-tools.zip"
-          dest="${basedir}/${build.dir}/ec2-api-tools"
+          dest="${basedir}/${build.dir}/bin/tmp"
+          >
+        </unzip>
+        <move 
+            file="${basedir}/${build.dir}/bin/tmp/ec2-api-tools-${ec2ApiToolsRevision}"
+          tofile="${basedir}/${build.dir}/bin/ec2-api-tools"
+        />
+        -->
+        
+        <!--  -->
+        
+        <unzip src="${basedir}/lib/tool/ec2-api-tools.zip"
+          dest="${basedir}/${build.dir}/bin/ec2-api-tools"
           >
             <patternset>
                 <include name="ec2-api-tools-${ec2ApiToolsRevision}/**"/>
@@ -26,9 +44,12 @@
                 <globmapper from="ec2-api-tools-${ec2ApiToolsRevision}/*" to="*"/>
             </mapper>
         </unzip>
+        
+        <!--  -->
+        
     </target>
-    <target name="-unzip-tools" depends="-do-unzip-tools" >
-        <property name="ec2Home" value="${basedir}/${build.dir}/ec2-api-tools" />
+    <target name="-unzip-tools-ec2" depends="-do-unzip-tools-ec2" >
+        <property name="ec2Home" value="${basedir}/${build.dir}/bin/ec2-api-tools" />
         <chmod dir="${ec2Home}/bin" perm="ug+x" includes="**" >
         </chmod>
         <loadfile property="ec2AccessKey" srcFile="${ec2PrivatesFolder}/access" />
@@ -38,50 +59,53 @@
         </path>
         <path id="ec2.classpath">
           <pathelement location="${basedir}/lib/jar/joda-time.jar" />
+          <!--
           <fileset dir="${basedir}/${build.dir}/lib">
             <include name="*.jar"/>
-          </fileset>            
+          </fileset>
+          -->
         </path>
     </target>
     
-    <target name="-check-for-tools">
-        <condition property="alreadyUnzipped" >
+    <target name="-check-for-tools-chef">
+        <condition property="alreadyUnzipped_chef" >
             <available
-              file="${basedir}/${build.dir}/ec2-api-tools"
+              file="${basedir}/${build.dir}/bin/chef-dk"
               type="dir"
             />
         </condition>
     </target>
-    <target name="-do-unzip-tools" depends="-check-for-tools" unless="alreadyUnzipped" >
-        <!--
-        <unzip src="${basedir}/lib/ec2-api-tools.zip"
-        -->
-        <unzip src="${basedir}/lib/tool/ec2-api-tools.zip"
-          dest="${basedir}/${build.dir}/ec2-api-tools"
+    <target name="-do-unzip-tools-chef" depends="-check-for-tools-chef" unless="alreadyUnzipped_chef" >
+        <mkdir dir="${basedir}/${build.dir}/bin" />
+        <untar src="${basedir}/lib/tool/chef-dk.tar.gz"
+          dest="${basedir}/${build.dir}/bin/chef-dk"
+          compression="gzip"
           >
             <patternset>
-                <include name="ec2-api-tools-${ec2ApiToolsRevision}/**"/>
+                <include name="chef-dk-${chef_revision}/**"/>
             </patternset>
             <mapper>
-                <globmapper from="ec2-api-tools-${ec2ApiToolsRevision}/*" to="*"/>
+                <globmapper from="chef-dk-${chef_revision}/*" to="*"/>
             </mapper>
-        </unzip>
+            <!--
+            -->
+        </untar>
     </target>
-    <target name="-unzip-tools" depends="-do-unzip-tools" >
-        <property name="ec2Home" value="${basedir}/${build.dir}/ec2-api-tools" />
-        <chmod dir="${ec2Home}/bin" perm="ug+x" includes="**" >
+    <target name="-unzip-tools-chef" depends="-do-unzip-tools-chef" >
+        <property name="chefHome" value="${basedir}/${build.dir}/bin/chef-dk" />
+        <chmod dir="${chefHome}/bin" perm="ug+x" includes="**" >
         </chmod>
-        <loadfile property="ec2AccessKey" srcFile="${ec2PrivatesFolder}/access" />
-        <loadfile property="ec2SecretKey" srcFile="${ec2PrivatesFolder}/secret" />
-        <path id="ec2.path">
-            <pathelement location="${ec2Home}/bin" />
+        <path id="chef.path">
+            <pathelement location="${chefHome}/bin" />
         </path>
-        <path id="ec2.classpath">
-          <pathelement location="${basedir}/lib/jar/joda-time.jar" />
-          <fileset dir="${basedir}/${build.dir}/lib">
-            <include name="*.jar"/>
-          </fileset>            
+        <!--
+        <path id="chef.classpath">
         </path>
+        -->
+        <echo file="${basedir}/${build.dir}/source_me.chef.sh" 
+          message="PATH=${toString:chef.path}:$$PATH"
+        />
+        
     </target>
     
     <target name="-compile" depends="-compile1" >
@@ -89,10 +113,11 @@
     <target name="-compile" depends="-compile1, -compile2, -compile3" >
     -->
     </target>
-    <target name="-compile1" depends="-unzip-tools" >
+    <target name="-compile1" depends="-unzip-tools-ec2, -unzip-tools-chef" >
         <echo message="Demonstrate Amazon EC2 command line power." />
         
         <path id="antpath.newpath" >
+            <path refid="chef.path" />
             <path refid="ec2.path" />
             <pathelement location="${env.JAVA_HOME}/bin" />
             <pathelement path="${env.PATH}" />
@@ -128,7 +153,7 @@
         </path>
         
     </target>
-    <target name="-compile2" depends="-unzip-tools" >
+    <target name="-compile2" depends="-compile1" >
         <echo message="ec2-describe-regions" />
         <!--
             <env key="CLASSPATH" value="${basedir}/lib/jar/joda-time.jar:${env.CLASSPATH}" />
@@ -145,7 +170,7 @@
         </exec>
 
     </target>
-    <target name="-compile3" depends="-unzip-tools" >
+    <target name="-compile3" depends="-compile1" >
         <property name="ec2Url" value="https://${ec2RegionUrlDomain}" />
         <echo message="ec2Demo.sh" />
         <chmod file="${basedir}/scripts/ec2Demo.sh" perm="ug+rx" />
@@ -198,7 +223,30 @@
           sync="true"
           symlink="true"
         />
-        <ivy:artifactproperty name="ec2ApiToolsRevision" value="[revision]" />
+        <ivy:resolve
+          resolveId="my.ivy.resolve.com.amazon.aws_ec2-api-tools"
+          inline="true"
+          organisation="com.amazon.aws"
+          module="ec2-api-tools"
+          transitive="false"
+          keep="true"
+        />
+        <ivy:artifactproperty name="ec2ApiToolsRevision" value="[revision]" 
+          resolveId="my.ivy.resolve.com.amazon.aws_ec2-api-tools"
+        />
         <echo message="ec2ApiToolsRevision = '${ec2ApiToolsRevision}'" />
+
+        <ivy:resolve
+          resolveId="my.ivy.resolve.io.chef_chef-dk"
+          inline="true"
+          organisation="io.chef"
+          module="chef-dk"
+          transitive="false"
+          keep="true"
+        />
+        <ivy:artifactproperty name="chef_revision" value="[revision]" 
+          resolveId="my.ivy.resolve.io.chef_chef-dk"
+        />
+        <echo message="chef_revision = '${chef_revision}'" />
     </target>
 </project>
