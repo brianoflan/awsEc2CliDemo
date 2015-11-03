@@ -1,0 +1,22 @@
+#!/bin/bash
+
+basedir=`dirname $0` ;
+if [[ "$basedir" == "" ]] ; then
+  basedir='.' ;
+fi ;
+cd $basedir ;
+
+for d in `ls -d module* | tac` ; do
+  error=0 ;
+  
+  cd "$d" && ant -v "$@" || error="$?" ;
+  # cd "$d" && ant "$@" || error="$?" ;
+  
+  if [[ $error -gt 0 ]] ; then
+    echo "Error with $d: $error." ;
+    exit 1 ;
+  fi ;
+  cd .. ;
+done ;
+
+#
