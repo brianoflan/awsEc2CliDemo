@@ -12,7 +12,7 @@ thereAreModuleFolders=`ls -d module* 2>/dev/null | tac` ;
 if [[ $thereAreModuleFolders ]] ; then
   moduleList=$thereAreModuleFolders ;
 else
-  moduleList=$(find . -maxdepth 1 -type d | egrep -v '^[.]$' | egrep -v '[.]old$' | tac ) ;
+  moduleList=$(find . -maxdepth 1 -type d | egrep -v '^[.]$' | egrep -v '[.](git|old)$' | tac ) ;
   # echo "moduleList = q(${moduleList})" ;
 fi ;
 

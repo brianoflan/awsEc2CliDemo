@@ -7,6 +7,10 @@
   nasIp='12.3.4.6' ;
   nasSecGrp='cliDemoSG_NAS' ;
 # END NAS
+# BEGIN HTTPD
+  webIp='12.3.4.7' ;
+  webSecGrp='cliDemoSG_Web' ;
+# END HTTPD
 
 if [[ -z $secGrpRule_useExclusiveIp ]] ; then
   secGrpRule_useExclusiveIp='1' ;
@@ -119,6 +123,7 @@ if [[ $secGrpRule_useExclusiveIp ]] ; then
 else
   myIpv4='' ;
 fi ;
+echo "Success. myIpv4='$myIpv4'" ;
 
 # if [[ '1' ]] ; then
   secGrpName=$USE_THIS_SEC_GRP ;
@@ -127,11 +132,19 @@ fi ;
   # echo "Success. secGrpId=$secGrpId" ;
 # fi ;
 
+  # secGrpDesc="Apache HTTPD Security Group for Amazon EC2 demo 1." ;
+  # secGrpName=$webSecGrp ;
+  # execute $thisDir/idemSecGrp.sh "$vpcId" "$secGrpName" "$secGrpDesc" > $tmp/secGrpId ;
+  # export secGrpIdWeb=`cat $tmp/secGrpId ` ;
+  
   secGrpDesc="NAS Security Group for Amazon EC2 demo 1." ;
   secGrpName=$nasSecGrp ;
   execute $thisDir/idemSecGrp.sh "$vpcId" "$secGrpName" "$secGrpDesc" > $tmp/secGrpId ;
   export secGrpIdNas=`cat $tmp/secGrpId ` ;
   
+  # # Apache HTTPD:
+  # execute $thisDir/idemSecGrpRule.sh "$secGrpIdWeb" "80" "tcp" "$myIpv4" > $tmp/secGrpRule ;
+
   # SMB/Samba/CIFS:
   execute $thisDir/idemSecGrpRule.sh "$secGrpIdNas" "137" "udp" "$myIpv4" > $tmp/secGrpRule ;
   execute $thisDir/idemSecGrpRule.sh "$secGrpIdNas" "138" "tcp" "$myIpv4" > $tmp/secGrpRule ;

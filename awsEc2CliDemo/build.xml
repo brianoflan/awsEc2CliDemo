@@ -108,7 +108,7 @@
         
     </target>
     
-    <target name="-compile" depends="-compile1" >
+    <target name="-compile" depends="-compile1, -compile2, -compile3" >
     <!--
     <target name="-compile" depends="-compile1, -compile2, -compile3" >
     -->
