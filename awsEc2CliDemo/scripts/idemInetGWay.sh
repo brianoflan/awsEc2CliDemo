@@ -87,17 +87,19 @@ fi ;
 
 #
 
+inetGWayId='' ;
 # # http://docs.aws.amazon.com/AWSEC2/latest/CommandLineReference/ApiReference-cmd-DescribeInternetGateways.html
-execute ec2-describe-internet-gateways -F "tag:Name=$inetGWayName" > $tmp/inetGWay ;
+# execute ec2-describe-internet-gateways -F "tag:Name=$inetGWayName" > $tmp/inetGWay ;
+execute ec2-describe-internet-gateways -F "attachment.vpc-id=$vpcId" > $tmp/inetGWay ;
 already=`cat $tmp/inetGWay ` ;
-if [[ -z $already ]] ; then
-  execute ec2-describe-internet-gateways -F "attachment.vpc-id=$vpcId" > $tmp/inetGWay ;
-  already=`cat $tmp/inetGWay ` ;
-else
-  echo "already = q(${already})" 1>&2 ;
-fi ;
+# if [[ -z $already ]] ; then
+#   execute ec2-describe-internet-gateways -F "attachment.vpc-id=$vpcId" > $tmp/inetGWay ;
+#   already=`cat $tmp/inetGWay ` ;
+# else
+#   echo "already = q(${already})" 1>&2 ;
+# fi ;
 if [[ $already ]] ; then
-  echo "Already a subnet." 1>&2 ;
+  echo "Already an Internet Gateway." 1>&2 ;
 # if [[ -z $already ]] ; then
 else
   echo "No such internet gateway." 1>&2 ;
@@ -111,6 +113,7 @@ else
     echo "Error (non-zero exit code) from command: '$error'." 1>&2 ;
     exit $error ;
   fi ;
+
   inetGWayId=`echo $already | perl -ne '/(^|\s)INTERNETGATEWAY\s+(\S+)(\s|$)/ && print $2' ` ;
   echo "inetGWayId: $inetGWayId" 1>&2 ;
 
@@ -132,6 +135,10 @@ else
     exit $error ;
   fi ;
 
+fi ;
+if [[ -z $inetGWayId ]] ; then
+  inetGWayId=`echo $already | perl -ne '/(^|\s)INTERNETGATEWAY\s+(\S+)(\s|$)/ && print $2' ` ;
+  echo "inetGWayId: $inetGWayId" 1>&2 ;
 fi ;
 
 echo "already = q(${already})" 1>&2 ;

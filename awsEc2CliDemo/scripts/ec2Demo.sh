@@ -123,8 +123,8 @@ done ;
 # fi ;
 
 # if [[ '1' ]] ; then
-  execute $thisDir/idemInetGWay.sh "$vpcId" "$subnetCidr" > $tmp/inetGWay ;
-  export inetGWay=`cat $tmp/inetGWay ` ;
+  execute $thisDir/idemInetGWay.sh "$vpcId" "$subnetCidr" > $tmp/inetGWayId ;
+  export inetGWay=`cat $tmp/inetGWayId ` ;
 # fi ;
 
 # if [[ '1' ]] ; then

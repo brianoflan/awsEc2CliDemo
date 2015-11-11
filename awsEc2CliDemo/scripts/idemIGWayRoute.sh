@@ -107,6 +107,6 @@ echo "routeTableId: $routeTableId" 1>&2 ;
   fi ;
 # fi ;
 
-echo "already = q(${already})" 1>&2 ;
+echo "Result from ec2-create-route = q(${already})" 1>&2 ;
 
 #
