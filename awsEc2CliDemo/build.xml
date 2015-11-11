@@ -103,7 +103,7 @@
         </path>
         -->
         <echo file="${basedir}/${build.dir}/source_me.chef.sh" 
-          message="PATH=${toString:chef.path}:$$PATH"
+          message="export PATH=${toString:chef.path}:$$PATH"
         />
         
     </target>
@@ -147,6 +147,7 @@
             <arg value="${build.dir}/tmp/antpath.newpath" />
         </exec>
         
+        <property name="env.CLASSPATH" value="${basedir}/lib" />
         <path id="antpath.newclasspath" >
             <path refid="ec2.classpath" />
             <pathelement path="${env.CLASSPATH}" />

@@ -4,11 +4,14 @@
 # # Valuable but less official: https://www.linux.com/learn/tutorials/761430-an-introduction-to-the-aws-command-line-tool
 
 # BEGIN NAS
-  nasIp='12.3.4.6' ;
+  # nasIp='12.3.4.6' ;
+  # nasSecGrp='cliDemoSG_NAS' ;
+  nasIp='10.20.30.6' ;
   nasSecGrp='cliDemoSG_NAS' ;
 # END NAS
 # BEGIN HTTPD
-  webIp='12.3.4.7' ;
+  # webIp='12.3.4.7' ;
+  webIp='10.20.30.7' ;
   webSecGrp='cliDemoSG_Web' ;
 # END HTTPD
 
@@ -16,14 +19,17 @@ if [[ -z $secGrpRule_useExclusiveIp ]] ; then
   secGrpRule_useExclusiveIp='1' ;
 fi ;
 if [[ -z $instancePrivateIp ]] ; then
-  instancePrivateIp='12.3.4.5' ;
+  # instancePrivateIp='12.3.4.5' ;
+  instancePrivateIp='10.20.30.5' ;
 fi ;
 if [[ -z $vpcCidr ]] ; then
-  export vpcCidr='12.3.0.0/16' ;
+  # export vpcCidr='12.3.0.0/16' ;
+  export vpcCidr='10.20.30.0/24' ; # Through 255.
 fi ;
 if [[ -z $subnetCidr ]] ; then
   # subnetCidr='12.3.128.0/17' ;
-  export subnetCidr='12.3.0.0/17' ;
+  # export subnetCidr='12.3.0.0/17' ;
+  export subnetCidr='10.20.30.0/25' ; # Through 127.
 fi ;
 if [[ -z $subnetCidr ]] ; then
   export subnetCidr=$vpcCidr ;
@@ -102,7 +108,7 @@ fi ;
 
 echo > $BUILD_DIR/source_me.sh ;
 for x in AWS_ACCESS_KEY AWS_SECRET_KEY EC2_HOME EC2_URL JAVA_HOME PATH CLASSPATH ; do
-  eval "echo \"$x=\$$x\"" >> $BUILD_DIR/source_me.sh ;
+  eval "echo \"export $x=\$$x\"" >> $BUILD_DIR/source_me.sh ;
 done ;
 
 # if [[ '1' ]] ; then
@@ -114,6 +120,11 @@ done ;
   # execute $thisDir/idemSubnet.sh "$vpcCidr" "$subnetCidr" > $tmp/subnetId ;
   execute $thisDir/idemSubnet.sh "$vpcId" "$subnetCidr" > $tmp/subnetId ;
   export subnetId=`cat $tmp/subnetId ` ;
+# fi ;
+
+# if [[ '1' ]] ; then
+  execute $thisDir/idemInetGWay.sh "$vpcId" "$subnetCidr" > $tmp/inetGWay ;
+  export inetGWay=`cat $tmp/inetGWay ` ;
 # fi ;
 
 if [[ $secGrpRule_useExclusiveIp ]] ; then
@@ -169,8 +180,8 @@ if [[ '1' ]] ; then
   echo "Success. findAmiTmp=$findAmiTmp" ;
 fi ;
 
-  nasIp='12.3.4.6' ;
-  nasSecGrp='cliDemoSG_NAS' ;
+# nasIp='12.3.4.6' ;
+# nasSecGrp='cliDemoSG_NAS' ;
   
 if [[ '1' ]] ; then
   execute $thisDir/idemKeyPair.sh "$keyPairName" > $tmp/keyPair ;
