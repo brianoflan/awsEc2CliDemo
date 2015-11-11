@@ -127,6 +127,11 @@ done ;
   export inetGWay=`cat $tmp/inetGWay ` ;
 # fi ;
 
+# if [[ '1' ]] ; then
+  execute $thisDir/idemIGWayRoute.sh "$vpcId" "$inetGWay" ;
+  # export x=`cat $tmp/x ` ;
+# fi ;
+
 if [[ $secGrpRule_useExclusiveIp ]] ; then
   execute ifconfig > $tmp/ifconfig ;
   myIpv4=`cat $tmp/ifconfig | grep 'inet addr' | grep -v '127\.0\.0\.1' ` ;

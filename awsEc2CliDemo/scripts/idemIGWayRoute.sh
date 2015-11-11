@@ -109,7 +109,4 @@ echo "routeTableId: $routeTableId" 1>&2 ;
 
 echo "already = q(${already})" 1>&2 ;
 
-echo "$inetGWayId" ;
-
-
 #
