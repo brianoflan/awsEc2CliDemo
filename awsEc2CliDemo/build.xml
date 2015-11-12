@@ -103,7 +103,7 @@
         </path>
         -->
         <echo file="${basedir}/${build.dir}/source_me.chef.sh" 
-          message="export PATH=${toString:chef.path}:$$PATH"
+          message="export PATH=${toString:chef.path}:/usr/local/bin:$$PATH"
         />
         
     </target>

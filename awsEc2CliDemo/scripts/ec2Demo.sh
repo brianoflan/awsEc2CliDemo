@@ -3,6 +3,9 @@
 # # http://docs.aws.amazon.com/AWSEC2/latest/CommandLineReference/ec2-cli-launch-instance.html
 # # Valuable but less official: https://www.linux.com/learn/tutorials/761430-an-introduction-to-the-aws-command-line-tool
 
+# ami-f38346b7
+# Chef Server 12, free 5 node, https://aws.amazon.com/marketplace/pp/B010OMNV2W, from https://docs.chef.io/aws_marketplace.html
+
 # BEGIN NAS
   # nasIp='12.3.4.6' ;
   # nasSecGrp='cliDemoSG_NAS' ;
