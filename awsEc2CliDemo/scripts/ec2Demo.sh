@@ -1,5 +1,10 @@
 #!/bin/bash
 
+pwd 1>&2 ;
+if [[ -f ../build/tmp/skipDemoScript ]] ; then
+  exit 0 ;
+fi ;
+
 # # http://docs.aws.amazon.com/AWSEC2/latest/CommandLineReference/ec2-cli-launch-instance.html
 # # Valuable but less official: https://www.linux.com/learn/tutorials/761430-an-introduction-to-the-aws-command-line-tool
 
@@ -143,6 +148,13 @@ if [[ $secGrpRule_useExclusiveIp ]] ; then
   execute ifconfig > $tmp/ifconfig ;
   myIpv4=`cat $tmp/ifconfig | grep 'inet addr' | grep -v '127\.0\.0\.1' ` ;
   myIpv4=`echo "$myIpv4" | grep Bcast | awk '{print $2}' | awk -F: '{print $2}' | head -1` ;
+  # # Nope.  Just because that's the IP it presents to ifconfig doesn't mean
+  # #  that's what the open waters sees.
+  # # http://stackoverflow.com/questions/3097589/getting-my-public-ip-via-api
+  myIpv4='' ;
+  # execute curl www.telize.com/ip > $tmp/ifconfig ;
+  execute curl icanhazip.com > $tmp/ifconfig ;
+  myIpv4=`cat $tmp/ifconfig` ;
 else
   myIpv4='' ;
 fi ;
@@ -169,20 +181,21 @@ echo "Success. myIpv4='$myIpv4'" ;
   # execute $thisDir/idemSecGrpRule.sh "$secGrpIdWeb" "80" "tcp" "$myIpv4" > $tmp/secGrpRule ;
 
   # SMB/Samba/CIFS:
-  execute $thisDir/idemSecGrpRule.sh "$secGrpIdNas" "137" "udp" "$myIpv4" > $tmp/secGrpRule ;
-  execute $thisDir/idemSecGrpRule.sh "$secGrpIdNas" "138" "tcp" "$myIpv4" > $tmp/secGrpRule ;
-  execute $thisDir/idemSecGrpRule.sh "$secGrpIdNas" "139" "tcp" "$myIpv4" > $tmp/secGrpRule ;
-  execute $thisDir/idemSecGrpRule.sh "$secGrpIdNas" "445" "tcp" "$myIpv4" > $tmp/secGrpRule ;
+  execute $thisDir/idemSecGrpRule.sh "$secGrpIdNas" "137" "udp" "$myIpv4" "16" > $tmp/secGrpRule ;
+  execute $thisDir/idemSecGrpRule.sh "$secGrpIdNas" "138" "tcp" "$myIpv4" "16" > $tmp/secGrpRule ;
+  execute $thisDir/idemSecGrpRule.sh "$secGrpIdNas" "139" "tcp" "$myIpv4" "16" > $tmp/secGrpRule ;
+  execute $thisDir/idemSecGrpRule.sh "$secGrpIdNas" "445" "tcp" "$myIpv4" "16" > $tmp/secGrpRule ;
   # NFS:
-  execute $thisDir/idemSecGrpRule.sh "$secGrpIdNas" "111" "udp" "$myIpv4" > $tmp/secGrpRule ;
-  execute $thisDir/idemSecGrpRule.sh "$secGrpIdNas" "111" "tcp" "$myIpv4" > $tmp/secGrpRule ;
-  execute $thisDir/idemSecGrpRule.sh "$secGrpIdNas" "2049" "udp" "$myIpv4" > $tmp/secGrpRule ;
-  execute $thisDir/idemSecGrpRule.sh "$secGrpIdNas" "2049" "tcp" "$myIpv4" > $tmp/secGrpRule ;
+  execute $thisDir/idemSecGrpRule.sh "$secGrpIdNas" "111"  "udp" "$myIpv4" "16" > $tmp/secGrpRule ;
+  execute $thisDir/idemSecGrpRule.sh "$secGrpIdNas" "111"  "tcp" "$myIpv4" "16" > $tmp/secGrpRule ;
+  execute $thisDir/idemSecGrpRule.sh "$secGrpIdNas" "2049" "udp" "$myIpv4" "16" > $tmp/secGrpRule ;
+  execute $thisDir/idemSecGrpRule.sh "$secGrpIdNas" "2049" "tcp" "$myIpv4" "16" > $tmp/secGrpRule ;
 
 # if [[ '1' ]] ; then
-  execute $thisDir/idemSecGrpRule.sh "$secGrpId" "22" "tcp" "$myIpv4" > $tmp/secGrpRule ;
-  execute $thisDir/idemSecGrpRule.sh "$secGrpId" "443" "tcp" "$myIpv4" > $tmp/secGrpRule ;
-  execute $thisDir/idemSecGrpRule.sh "$secGrpId" "8443" "tcp" "$myIpv4" > $tmp/secGrpRule ;
+  execute $thisDir/idemSecGrpRule.sh "$secGrpId" "22"   "tcp" "$myIpv4" "16" > $tmp/secGrpRule ;
+  execute $thisDir/idemSecGrpRule.sh "$secGrpId" "443"  "tcp" "$myIpv4" "16" > $tmp/secGrpRule ;
+  execute $thisDir/idemSecGrpRule.sh "$secGrpId" "8443" "tcp" "$myIpv4" "16" > $tmp/secGrpRule ;
+  execute $thisDir/idemSecGrpRule.sh "$secGrpId" "5672" "tcp" "$myIpv4" "16" > $tmp/secGrpRule ; # RabbitMQ for Chef Server
   export secGrpRuleTmp=`cat $tmp/secGrpRule ` ;
   echo "Success. secGrpRuleTmp=$secGrpRuleTmp" ;
 # fi ;

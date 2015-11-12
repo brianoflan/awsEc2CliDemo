@@ -108,9 +108,9 @@
         
     </target>
     
-    <target name="-compile" depends="-compile1, -compile2, -compile3" >
+    <target name="-compile" depends="-compile1, -compile3, -compile4" >
     <!--
-    <target name="-compile" depends="-compile1, -compile2, -compile3" >
+    <target name="-compile" depends="-compile1, -compile2, -compile3, -compile4" >
     -->
     </target>
     <target name="-compile1" depends="-unzip-tools-ec2, -unzip-tools-chef" >
@@ -181,7 +181,8 @@
             <arg value="-c" />
             <arg value="${basedir}/scripts/ec2Demo.sh" />
         -->
-            <exec executable="${basedir}/scripts/ec2Demo.sh" 
+        <exec executable="${basedir}/scripts/ec2Demo.sh"
+          dir="${basedir}/scripts"
           output="${basedir}/build/ec2Demo.out"
           error="${basedir}/build/ec2Demo.err"
           failonerror="true"
@@ -217,6 +218,20 @@
         <echoproperties prefix="ivy">
         </echoproperties>
         -->
+    </target>
+    <target name="-compile4" depends="-compile3" >
+        <echo message="chef.sh" />
+        <chmod file="${basedir}/scripts/chef.sh" perm="ug+rx" />
+        <exec executable="${basedir}/scripts/chef.sh" 
+          output="${basedir}/build/chef.sh.out"
+          error="${basedir}/build/chef.sh.err"
+          failonerror="true"
+          >
+            <env key="BUILD_DIR" value="${basedir}/${build.dir}" />
+            <env key="JAVA_HOME" value="${env.JAVA_HOME}" />
+            <env key="PATH"      value="${toString:antpath.newpath}" />
+            <env key="CLASSPATH" value="${toString:antpath.newclasspath}" />
+        </exec>
     </target>
     <target name="-compile-ivy-retrieve" >
         <ivy:retrieve
