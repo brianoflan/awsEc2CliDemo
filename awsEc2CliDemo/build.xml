@@ -187,7 +187,6 @@
           error="${basedir}/build/ec2Demo.err"
           failonerror="true"
           >
-            
             <env key="AWS_ACCESS_KEY" value="${ec2AccessKey}" />
             <env key="AWS_SECRET_KEY" value="${ec2SecretKey}" />
             <env key="BUILD_DIR" value="${basedir}/${build.dir}" />
@@ -227,6 +226,10 @@
           error="${basedir}/build/chef.sh.err"
           failonerror="true"
           >
+            <env key="AWS_ACCESS_KEY" value="${ec2AccessKey}" />
+            <env key="AWS_SECRET_KEY" value="${ec2SecretKey}" />
+            <env key="EC2_HOME" value="${ec2Home}" />
+            <env key="EC2_URL" value="${ec2Url}" />
             <env key="BUILD_DIR" value="${basedir}/${build.dir}" />
             <env key="JAVA_HOME" value="${env.JAVA_HOME}" />
             <env key="PATH"      value="${toString:antpath.newpath}" />

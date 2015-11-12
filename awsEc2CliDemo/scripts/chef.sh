@@ -1,7 +1,12 @@
 #!/bin/bash
 
 export LC_ALL='en_US.UTF-8' ;
+export LANGUAGE='en_US.UTF-8' ;
+export LANG='en_US.UTF-8' ;
 
+chefDkOmnibusUrl='https://opscode-omnibus-packages.s3.amazonaws.com/el/7/x86_64/chefdk-0.10.0-1.el7.x86_64.rpm' ;
+forChefDkUseOmnibusRpm='' ; # blank '' for false
+vagrantUrl='https://releases.hashicorp.com/vagrant/1.7.4/vagrant_1.7.4_x86_64.rpm' ;
 gitDkUrl='https://github.com/chef/chef-dk.git' ;
 useUser2=user2 ;
 yumInstallList='git ruby-devel make gcc' ;
@@ -50,6 +55,7 @@ function execute {
 #
 
 extIp=`/bin/bash $thisDir/getExtIp.sh '' $workstationInternalIp ` ;
+echo -e "extIp $extIp\n" 1>&2 ;
 
 error='' ;
 
@@ -133,7 +139,37 @@ if [[ $madeNewSshFolder ]] ; then
   fi ;
 fi ;
 
+x=`ssh -i $thisDir/$privKey.pem $useUser1@$extIp ls -d vagrant.rpm 2>/dev/null ` ;
+if [[ -z $x ]] ; then
+  # echo "vagrantUrl $vagrantUrl" 1>&2 ;
+  cmdX="curl -o vagrant.rpm $vagrantUrl " ;
+  echo "cmdX q($cmdX)" 1>&2 ;
+  # ssh -i $thisDir/$privKey.pem $useUser1@$extIp /bin/bash -c "curl -o vagrant.rpm $vagrantUrl " 1>&2 || error=$? ;
+  ssh -i $thisDir/$privKey.pem $useUser1@$extIp $cmdX 1>&2 || error=$? ;
+  if [[ $error -gt 0 ]] ; then
+    echo "error='$error'" ;
+    exit $error ;
+  fi ;
+fi ;
+
+x=`ssh -i $thisDir/$privKey.pem $useUser1@$extIp yum list installed vagrant 2>/dev/null | egrep -v '^Loaded plugins' ` ;
+# # #
+if [[ -z $x ]] ; then
+  ssh -i $thisDir/$privKey.pem $useUser1@$extIp -t -t sudo rpm -Uvh vagrant.rpm 1>&2 || error=$? ;
+  if [[ $error -gt 0 ]] ; then
+    echo "error with rpm install vagrant.rpm = '$error'" ;
+    exit $error ;
+  fi ;
+else
+  echo "yum list installed vagrant = q($x)" 1>&2 ;
+fi ;
+
+  
 # # # NOW AS USER2
+
+if [[ $forChefDkUseOmnibusRpm ]] ; then
+  gitDkUrl='' ;
+fi ;
 
 for url in $gitDkUrl $gitRepo ; do
   ssh -i $thisDir/$privKey.pem $useUser2@$extIp git clone $url \
@@ -148,19 +184,64 @@ for url in $gitDkUrl $gitRepo ; do
   fi ;
 done ;
 
-ssh -i $thisDir/$privKey.pem $useUser2@$extIp /bin/bash -c "cd chef-dk ; gem install chef-dk" 1>&2 || error=$? ;
-if [[ $error -gt 0 ]] ; then
-  echo "error with gem install chef-dk='$error'" ;
-  # exit $error ;
+if [[ $forChefDkUseOmnibusRpm ]] ; then
+
+  x=`ssh -i $thisDir/$privKey.pem $useUser2@$extIp ls -d /var/tmp/chef-dk.rpm 2>/dev/null ` ;
+  if [[ -z $x ]] ; then
+    cmdX="curl -o /var/tmp/chef-dk.rpm $chefDkOmnibusUrl " ;
+    echo "cmdX q($cmdX)" 1>&2 ;
+    ssh -i $thisDir/$privKey.pem $useUser2@$extIp $cmdX 1>&2 || error=$? ;
+    if [[ $error -gt 0 ]] ; then
+      echo "error='$error'" ;
+      exit $error ;
+    fi ;
+  fi ;
+
+  # User1 for sudo
+  x=`ssh -i $thisDir/$privKey.pem $useUser1@$extIp ls -d /opt/chefdk 2>/dev/null ` ;
+  # # # Just as good?
+  # x=`ssh -i $thisDir/$privKey.pem $useUser1@$extIp yum list installed chefdk 2>/dev/null | egrep -v '^Loaded plugins' ` ;
+  # # #
+  if [[ -z $x ]] ; then
+    ssh -i $thisDir/$privKey.pem $useUser1@$extIp -t -t sudo rpm -Uvh /var/tmp/chef-dk.rpm 1>&2 || error=$? ;
+    if [[ $error -gt 0 ]] ; then
+      echo "error='$error'" ;
+      exit $error ;
+    fi ;
+  fi ;
+
+else
+
+  # x=`ssh -i $thisDir/$privKey.pem $useUser2@$extIp /bin/bash -c "gem query --local | egrep 'chef' " ` ;
+  x=`ssh -i $thisDir/$privKey.pem $useUser2@$extIp gem query --local | egrep '^chef.dk' ` ;
+    echo "x='$x'" ;
+  if [[ -z $x ]] ; then
+    ssh -i $thisDir/$privKey.pem $useUser2@$extIp /bin/bash -c "cd chef-dk ; gem install bundler chef-dk" 1>&2 || error=$? ;
+    if [[ $error -gt 0 ]] ; then
+      echo "error with gem install chef-dk='$error'" ;
+      # exit $error ; # Exits 128 even if successful.
+      if [[ $error -eq 128 ]] ; then
+        echo "Ignoring exit code 128." ;
+      else
+        exit $error ;      
+      fi ;
+    fi ;
+  fi ;
+  
 fi ;
 
-ssh -i $thisDir/$privKey.pem $useUser2@$extIp /bin/bash -c "export PATH=\"/home/$useUser2/chef-dk/bin:\$PATH\" ; cd $tutDemoDir ; pwd ; chef generate cookbook cookbooks/hello_chef_server" 1>&2 || error=$? ;
-if [[ $error -gt 0 ]] ; then
-  echo "error with chef generate='$error'" ;
-  exit $error ;
+error='' ;
+
+x=`ssh -i $thisDir/$privKey.pem $useUser2@$extIp ls -d $tutDemoDir/cookbooks/hello_chef_server 2>/dev/null ` ;
+if [[ -z $x ]] ; then
+  # ssh -i $thisDir/$privKey.pem $useUser2@$extIp /bin/bash -c "echo ; echo PATH ; echo \$PATH ; echo \"/home/$useUser2/chef-dk/bin:\$PATH\" ; export PATH=\"/home/$useUser2/chef-dk/bin:\$PATH\" ; cd $tutDemoDir ; pwd ; echo PATH ; echo \$PATH ; which chef ; chef generate cookbook cookbooks/hello_chef_server" 1>&2 || error=$? ;
+  ssh -i $thisDir/$privKey.pem $useUser2@$extIp /bin/bash -c "echo ; export PATH=\"/home/$useUser2/chef-dk/bin:\$PATH\" ; cd $tutDemoDir ; chef generate cookbook cookbooks/hello_chef_server" 1>&2 || error=$? ;
+  if [[ $error -gt 0 ]] ; then
+    echo "error with chef generate='$error'" ;
+    # # exit $error ; # Exits 128 even if successful.
+    exit $error ;
+  fi ;
 fi ;
-
-
 
 #
 
