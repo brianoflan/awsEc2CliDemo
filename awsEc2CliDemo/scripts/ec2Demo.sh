@@ -181,6 +181,8 @@ echo "Success. myIpv4='$myIpv4'" ;
 
 # if [[ '1' ]] ; then
   execute $thisDir/idemSecGrpRule.sh "$secGrpId" "22" "tcp" "$myIpv4" > $tmp/secGrpRule ;
+  execute $thisDir/idemSecGrpRule.sh "$secGrpId" "443" "tcp" "$myIpv4" > $tmp/secGrpRule ;
+  execute $thisDir/idemSecGrpRule.sh "$secGrpId" "8443" "tcp" "$myIpv4" > $tmp/secGrpRule ;
   export secGrpRuleTmp=`cat $tmp/secGrpRule ` ;
   echo "Success. secGrpRuleTmp=$secGrpRuleTmp" ;
 # fi ;

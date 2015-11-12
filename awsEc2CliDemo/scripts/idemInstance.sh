@@ -150,6 +150,7 @@ else
   alreadyInstance=`$cmdX` ; error=$? ;
   if [[ $error -gt 0 ]] ; then
     echo "Error (non-zero exit code) from command: '$error'." ;
+    exit $error ;
   fi ;
   sleep 120 ; # Takes a certain amount of time to spin up a new instance.  Hate to accidentally run this idempotent script before it was warm.
 fi ;
