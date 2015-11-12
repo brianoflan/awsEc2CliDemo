@@ -3,8 +3,12 @@
 # # http://docs.aws.amazon.com/AWSEC2/latest/CommandLineReference/ec2-cli-launch-instance.html
 # # Valuable but less official: https://www.linux.com/learn/tutorials/761430-an-introduction-to-the-aws-command-line-tool
 
-# ami-f38346b7
-# Chef Server 12, free 5 node, https://aws.amazon.com/marketplace/pp/B010OMNV2W, from https://docs.chef.io/aws_marketplace.html
+# BEGIN Chef Server
+  # Chef Server 12, free 5 node, https://aws.amazon.com/marketplace/pp/B010OMNV2W, from https://docs.chef.io/aws_marketplace.html
+  chefServerAmi='ami-f38346b7' ;
+  chefServerIp='10.20.30.8' ;
+  chefServerInstType='t2.medium' ;
+# END Chef Server
 
 # BEGIN NAS
   # nasIp='12.3.4.6' ;
@@ -207,13 +211,28 @@ if [[ '1' ]] ; then
   echo "Success. instanceId=$instanceId" ;
 fi ;
 
-#
+# NAS
+  doAssociatePublicIpAddress=false ;
   execute $thisDir/idemInstance.sh "$vpcId" "$subnetId" "$secGrpIdNas" "$keyPairName" "$USE_EC2_AMI" \
-    "$nasIp" "false" > $tmp/instanceId ;
+    "$nasIp" "$doAssociatePublicIpAddress" > $tmp/instanceId ;
     #
   #
   export nasInstance=`cat $tmp/instanceId ` ;
+  echo "nasInstance = $nasInstance" 1>&2 ;
 #
+
+# Chef Server
+  secGrpIdChefServer=$secGrpId ;
+  doAssociatePublicIpAddress=false ;
+  export INSTANCE_TYPE=t2.medium ;
+  execute $thisDir/idemInstance.sh "$vpcId" "$subnetId" "$secGrpIdChefServer" "$keyPairName" "$chefServerAmi" \
+    "$chefServerIp" "$doAssociatePublicIpAddress" > $tmp/instanceId ;
+    #
+  #
+  export chefServerInstance=`cat $tmp/instanceId ` ;
+  echo "chefServerInstance = $chefServerInstance" 1>&2 ;
+#
+
 #
 #
 
