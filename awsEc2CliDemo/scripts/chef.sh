@@ -287,25 +287,44 @@ if [[ '1' ]] ; then
   fi ;
 fi ;
 
-if [[ '1' ]] ; then
-  bn=`basename $gitRepo | sed -e 's/[.]git$//'` ;
-  # ssh -i $thisDir/$privKey.pem $useUser2@$extIp bash -c "echo ; chef-apply -v ; echo \$?" \
-  ssh -i $thisDir/$privKey.pem $useUser2@$extIp bash -c "echo ; export PATH=\"/home/$useUser2/bin:\$PATH\" ; nohup bash $bn/cookbooks/do_tut2/templates/default/runChefZero.sh.erb > /var/tmp/chef-zero.out 2>&1 & true ; echo \$?" \
-    > $thisDir/$tmp/runChefZero 2>&1 || error=$? ;
+runSshCmd() {
+  if [[ -z $DEBUG ]] ; then
+    DEBUG='' ;
+  fi ;
+  what="$1" ;
+  cmd="$2" ;
+  user="$3" ;
+  if [[ -z $user ]] ; then
+    user="$useUser2" ;
+  fi ;
+  ssh -i $thisDir/$privKey.pem $user@$extIp bash -c "echo ; export PATH=\"/home/$user/bin:\$PATH\" ; $cmd ; echo \$?" \
+    > $thisDir/$tmp/$what 2>&1 || error=$? ;
   if [[ $error -gt 0 ]] ; then
-    echo "error with git fetch rebase = '$error'" ;
+    echo "error with $what = '$error'" 1>&2 ;
     if [[ $error -eq 128 ]] ; then
-      echo "Maybe ignoring exit code 128." ;
-      error=`tail -1 $thisDir/$tmp/runChefZero` ;
-      echo "Actual error='$error'." ;
+      echo "Maybe ignoring exit code 128." 1>&2 ;
+      error=`tail -1 $thisDir/$tmp/$what` 1>&2 ;
     fi ;
     if [[ $error -gt 0 ]] ; then
-      cat $thisDir/$tmp/runChefZero ;
+      echo "Actual error='$error'." 1>&2 ;
+      cat $thisDir/$tmp/$what ;
       exit $error ;
     fi ;
   fi ;
-  echo "Output from git fetch rebase:" 1>&2 ;
-  cat $thisDir/$tmp/runChefZero 1>&2 ;
+  if [[ $DEBUG ]] ; then
+    echo "Output from $what:" 1>&2 ;
+    cat $thisDir/$tmp/$what 1>&2 ;
+  fi ;
+}
+
+if [[ '1' ]] ; then
+  bn=`basename $gitRepo | sed -e 's/[.]git$//'` ;
+  runSshCmd "runChefZero" "bash $bn/cookbooks/do_tut2/templates/default/runChefZero.sh.erb" ;
+  x=`ssh -i $thisDir/$privKey.pem $useUser2@$extIp ls -d chef-repo 2>/dev/null | egrep '^l' ` ;
+  if [[ -z $x ]] ; then
+    runSshCmd "linkHomeChefRepo" "ln -s $bn/ chef-repo" ;
+  fi ;
+  runSshCmd "runChefZero" "bash $bn/cookbooks/do_tut2/templates/default/runChefZero.sh.erb" ;
 fi ;
 
 
