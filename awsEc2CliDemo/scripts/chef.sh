@@ -50,6 +50,37 @@ function execute {
   fi ;
 }
 
+runSshCmd() {
+  if [[ -z $DEBUG ]] ; then
+    DEBUG='' ;
+  fi ;
+  what="$1" ;
+  cmd="$2" ;
+  user="$3" ;
+  if [[ -z $user ]] ; then
+    user="$useUser2" ;
+  fi ;
+  ssh -i $thisDir/$privKey.pem $user@$extIp bash -c "echo ; export PATH=\"/home/$user/bin:\$PATH\" ; $cmd ; echo \$?" \
+    > $thisDir/$tmp/$what 2>&1 || error=$? ;
+  if [[ $error -gt 0 ]] ; then
+    echo "error with $what = '$error'" 1>&2 ;
+    if [[ $error -eq 128 ]] ; then
+      echo "Maybe ignoring exit code 128." 1>&2 ;
+      error=`tail -1 $thisDir/$tmp/$what` 1>&2 ;
+    fi ;
+    if [[ $error -gt 0 ]] ; then
+      echo "Actual error='$error'." 1>&2 ;
+      cat $thisDir/$tmp/$what ;
+      exit $error ;
+    fi ;
+  fi ;
+  if [[ $DEBUG ]] ; then
+    echo "Output from $what:" 1>&2 ;
+    cat $thisDir/$tmp/$what 1>&2 ;
+  fi ;
+}
+
+
 #
 
 #
@@ -184,22 +215,26 @@ for url in $gitDkUrl $gitRepo ; do
   fi ;
   bn=`basename $url | sed -e 's/[.]git$//'` ;
   echo "url bn $bn" 1>&2 ;
-  ssh -i $thisDir/$privKey.pem $useUser2@$extIp bash -c "echo ; cd $bn && pwd && git fetch origin && git rebase origin/master ; echo \$?" \
-    > $thisDir/$tmp/gitFetchRebase 2>&1 || error=$? ;
-  if [[ $error -gt 0 ]] ; then
-    echo "error with git fetch rebase = '$error'" ;
-    if [[ $error -eq 128 ]] ; then
-      echo "Maybe ignoring exit code 128." ;
-      error=`tail -1 $thisDir/$tmp/gitFetchRebase` ;
-      echo "Actual error='$error'." ;
-    fi ;
+  if [[ '' ]] ; then
+    ssh -i $thisDir/$privKey.pem $useUser2@$extIp bash -c "echo ; cd $bn && pwd && git fetch origin && git rebase origin/master ; echo \$?" \
+      > $thisDir/$tmp/gitFetchRebase 2>&1 || error=$? ;
     if [[ $error -gt 0 ]] ; then
-      cat $thisDir/$tmp/gitFetchRebase ;
-      exit $error ;
+      echo "error with git fetch rebase = '$error'" ;
+      if [[ $error -eq 128 ]] ; then
+        echo "Maybe ignoring exit code 128." ;
+        error=`tail -1 $thisDir/$tmp/gitFetchRebase` ;
+        echo "Actual error='$error'." ;
+      fi ;
+      if [[ $error -gt 0 ]] ; then
+        cat $thisDir/$tmp/gitFetchRebase ;
+        exit $error ;
+      fi ;
     fi ;
+    echo "Output from git fetch rebase:" 1>&2 ;
+    cat $thisDir/$tmp/gitFetchRebase 1>&2 ;
+  else
+    runSshCmd "gitFetchRebase_v2" "cd $bn && pwd && git fetch origin && git rebase origin/master" ;
   fi ;
-  echo "Output from git fetch rebase:" 1>&2 ;
-  cat $thisDir/$tmp/gitFetchRebase 1>&2 ;
 done ;
 
 if [[ $forChefDkUseOmnibusRpm ]] ; then
@@ -236,7 +271,7 @@ else
 
   # x=`ssh -i $thisDir/$privKey.pem $useUser2@$extIp /bin/bash -c "gem query --local | egrep 'chef' " ` ;
   x=`ssh -i $thisDir/$privKey.pem $useUser2@$extIp gem query --local | egrep '^chef.dk' ` ;
-    echo "x='$x'" ;
+  echo "gem query local chef.dk ='$x'" 1>&2 ;
   if [[ -z $x ]] ; then
     ssh -i $thisDir/$privKey.pem $useUser2@$extIp /bin/bash -c "cd chef-dk ; gem install bundler chef-dk" 1>&2 || error=$? ;
     if [[ $error -gt 0 ]] ; then
@@ -286,36 +321,6 @@ if [[ '1' ]] ; then
     fi ;
   fi ;
 fi ;
-
-runSshCmd() {
-  if [[ -z $DEBUG ]] ; then
-    DEBUG='' ;
-  fi ;
-  what="$1" ;
-  cmd="$2" ;
-  user="$3" ;
-  if [[ -z $user ]] ; then
-    user="$useUser2" ;
-  fi ;
-  ssh -i $thisDir/$privKey.pem $user@$extIp bash -c "echo ; export PATH=\"/home/$user/bin:\$PATH\" ; $cmd ; echo \$?" \
-    > $thisDir/$tmp/$what 2>&1 || error=$? ;
-  if [[ $error -gt 0 ]] ; then
-    echo "error with $what = '$error'" 1>&2 ;
-    if [[ $error -eq 128 ]] ; then
-      echo "Maybe ignoring exit code 128." 1>&2 ;
-      error=`tail -1 $thisDir/$tmp/$what` 1>&2 ;
-    fi ;
-    if [[ $error -gt 0 ]] ; then
-      echo "Actual error='$error'." 1>&2 ;
-      cat $thisDir/$tmp/$what ;
-      exit $error ;
-    fi ;
-  fi ;
-  if [[ $DEBUG ]] ; then
-    echo "Output from $what:" 1>&2 ;
-    cat $thisDir/$tmp/$what 1>&2 ;
-  fi ;
-}
 
 if [[ '1' ]] ; then
   bn=`basename $gitRepo | sed -e 's/[.]git$//'` ;
