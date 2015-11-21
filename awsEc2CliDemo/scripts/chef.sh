@@ -327,8 +327,4 @@ if [[ '1' ]] ; then
   runSshCmd "runChefZero" "cd chef-repo && knife upload ." ;
 fi ;
 
-
-#
-
-
 #
