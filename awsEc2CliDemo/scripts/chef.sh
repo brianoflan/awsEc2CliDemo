@@ -320,11 +320,11 @@ runSshCmd() {
 if [[ '1' ]] ; then
   bn=`basename $gitRepo | sed -e 's/[.]git$//'` ;
   runSshCmd "runChefZero" "bash $bn/cookbooks/do_tut2/templates/default/runChefZero.sh.erb" ;
-  x=`ssh -i $thisDir/$privKey.pem $useUser2@$extIp ls -d chef-repo 2>/dev/null | egrep '^l' ` ;
+  x=`ssh -i $thisDir/$privKey.pem $useUser2@$extIp ls -d $bn 2>/dev/null | egrep '^l' ` ;
   if [[ -z $x ]] ; then
-    runSshCmd "linkHomeChefRepo" "ln -s $bn/ chef-repo" ;
+    runSshCmd "linkHomeChefRepo" "mv $bn chef-repo ; ln -s chef-repo/ $bn" ;
   fi ;
-  runSshCmd "runChefZero" "bash $bn/cookbooks/do_tut2/templates/default/runChefZero.sh.erb" ;
+  runSshCmd "runChefZero" "cd chef-repo && knife upload ." ;
 fi ;
 
 
