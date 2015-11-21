@@ -290,7 +290,7 @@ fi ;
 if [[ '1' ]] ; then
   bn=`basename $gitRepo | sed -e 's/[.]git$//'` ;
   # ssh -i $thisDir/$privKey.pem $useUser2@$extIp bash -c "echo ; chef-apply -v ; echo \$?" \
-  ssh -i $thisDir/$privKey.pem $useUser2@$extIp bash -c "echo ; nohup bash $bn/cookbooks/do_tut2/templates/default/runChefZero.sh.erb > /var/tmp/chef-zero.out 2>&1 & true ; echo \$?" \
+  ssh -i $thisDir/$privKey.pem $useUser2@$extIp bash -c "echo ; export PATH=\"/home/$useUser2/bin:\$PATH\" ; nohup bash $bn/cookbooks/do_tut2/templates/default/runChefZero.sh.erb > /var/tmp/chef-zero.out 2>&1 & true ; echo \$?" \
     > $thisDir/$tmp/runChefZero 2>&1 || error=$? ;
   if [[ $error -gt 0 ]] ; then
     echo "error with git fetch rebase = '$error'" ;
