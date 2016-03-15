@@ -4,8 +4,9 @@ export LC_ALL='en_US.UTF-8' ;
 export LANGUAGE='en_US.UTF-8' ;
 export LANG='en_US.UTF-8' ;
 
+useChefZeroOrChefClient='zero' ; # 'zero' or 'client'
 chefDkOmnibusUrl='https://opscode-omnibus-packages.s3.amazonaws.com/el/7/x86_64/chefdk-0.10.0-1.el7.x86_64.rpm' ;
-forChefDkUseOmnibusRpm='' ; # blank '' for false
+forChefDkUseOmnibusRpm='1' ; # blank '' for false
 vagrantUrl='https://releases.hashicorp.com/vagrant/1.7.4/vagrant_1.7.4_x86_64.rpm' ;
 gitDkUrl='https://github.com/chef/chef-dk.git' ;
 useUser2=user2 ;
@@ -49,6 +50,37 @@ function execute {
     exit $error ;
   fi ;
 }
+
+runSshCmd() {
+  if [[ -z $DEBUG ]] ; then
+    DEBUG='' ;
+  fi ;
+  what="$1" ;
+  cmd="$2" ;
+  user="$3" ;
+  if [[ -z $user ]] ; then
+    user="$useUser2" ;
+  fi ;
+  ssh -i $thisDir/$privKey.pem $user@$extIp bash -c "echo ; export PATH=\"/home/$user/bin:\$PATH\" ; $cmd ; echo \$?" \
+    > $thisDir/$tmp/$what 2>&1 || error=$? ;
+  if [[ $error -gt 0 ]] ; then
+    echo "error with $what = '$error'" 1>&2 ;
+    if [[ $error -eq 128 ]] ; then
+      echo "Maybe ignoring exit code 128." 1>&2 ;
+      error=`tail -1 $thisDir/$tmp/$what` 1>&2 ;
+    fi ;
+    if [[ $error -gt 0 ]] ; then
+      echo "Actual error='$error'." 1>&2 ;
+      cat $thisDir/$tmp/$what ;
+      exit $error ;
+    fi ;
+  fi ;
+  if [[ $DEBUG ]] ; then
+    echo "Output from $what:" 1>&2 ;
+    cat $thisDir/$tmp/$what 1>&2 ;
+  fi ;
+}
+
 
 #
 
@@ -182,6 +214,28 @@ for url in $gitDkUrl $gitRepo ; do
       exit $error ;
     fi ;
   fi ;
+  bn=`basename $url | sed -e 's/[.]git$//'` ;
+  echo "url bn $bn" 1>&2 ;
+  if [[ '' ]] ; then
+    ssh -i $thisDir/$privKey.pem $useUser2@$extIp bash -c "echo ; cd $bn && pwd && git fetch origin && git rebase origin/master ; echo \$?" \
+      > $thisDir/$tmp/gitFetchRebase 2>&1 || error=$? ;
+    if [[ $error -gt 0 ]] ; then
+      echo "error with git fetch rebase = '$error'" ;
+      if [[ $error -eq 128 ]] ; then
+        echo "Maybe ignoring exit code 128." ;
+        error=`tail -1 $thisDir/$tmp/gitFetchRebase` ;
+        echo "Actual error='$error'." ;
+      fi ;
+      if [[ $error -gt 0 ]] ; then
+        cat $thisDir/$tmp/gitFetchRebase ;
+        exit $error ;
+      fi ;
+    fi ;
+    echo "Output from git fetch rebase:" 1>&2 ;
+    cat $thisDir/$tmp/gitFetchRebase 1>&2 ;
+  else
+    runSshCmd "gitFetchRebase_v2" "cd $bn && pwd && git fetch origin && git rebase origin/master" ;
+  fi ;
 done ;
 
 if [[ $forChefDkUseOmnibusRpm ]] ; then
@@ -192,7 +246,7 @@ if [[ $forChefDkUseOmnibusRpm ]] ; then
     echo "cmdX q($cmdX)" 1>&2 ;
     ssh -i $thisDir/$privKey.pem $useUser2@$extIp $cmdX 1>&2 || error=$? ;
     if [[ $error -gt 0 ]] ; then
-      echo "error='$error'" ;
+      echo "error with curl chefDkOmnibusUrl = '$error'" ;
       exit $error ;
     fi ;
   fi ;
@@ -205,8 +259,12 @@ if [[ $forChefDkUseOmnibusRpm ]] ; then
   if [[ -z $x ]] ; then
     ssh -i $thisDir/$privKey.pem $useUser1@$extIp -t -t sudo rpm -Uvh /var/tmp/chef-dk.rpm 1>&2 || error=$? ;
     if [[ $error -gt 0 ]] ; then
-      echo "error='$error'" ;
-      exit $error ;
+      echo "error rpm update chef-dk.rpm = '$error'" ;
+      if [[ $error -eq 128 ]] ; then
+        echo "Ignoring exit code 128." ;
+      else
+        exit $error ;      
+      fi ;
     fi ;
   fi ;
 
@@ -214,7 +272,7 @@ else
 
   # x=`ssh -i $thisDir/$privKey.pem $useUser2@$extIp /bin/bash -c "gem query --local | egrep 'chef' " ` ;
   x=`ssh -i $thisDir/$privKey.pem $useUser2@$extIp gem query --local | egrep '^chef.dk' ` ;
-    echo "x='$x'" ;
+  echo "gem query local chef.dk ='$x'" 1>&2 ;
   if [[ -z $x ]] ; then
     ssh -i $thisDir/$privKey.pem $useUser2@$extIp /bin/bash -c "cd chef-dk ; gem install bundler chef-dk" 1>&2 || error=$? ;
     if [[ $error -gt 0 ]] ; then
@@ -243,7 +301,34 @@ if [[ -z $x ]] ; then
   fi ;
 fi ;
 
-#
-
+if [[ "zero" == "$useChefZeroOrChefClient" ]] ; then
+  if [[ '1' ]] ; then
+    x=`ssh -i $thisDir/$privKey.pem $useUser2@$extIp gem query --local | egrep '^chef.zero' ` ;
+    echo "gem query local chef.zero ='$x'" 1>&2 ;
+    if [[ -z $x ]] ; then
+      runSshCmd "gemInstallChefZero" "gem install chef-zero" ;
+    fi ;
+  fi ;
+  
+  if [[ '1' ]] ; then
+    x=`ssh -i $thisDir/$privKey.pem $useUser2@$extIp ls -d /var/tmp/chef-zero.pid ` ;
+    echo "existing chef-zero.pid file ='$x'" 1>&2 ;
+    if [[ $x ]] ; then
+      runSshCmd "runChefZero" "bash -c \"kill -15 \$(/var/tmp/chef-zero.pid) ; rm -f /var/tmp/chef-zero.pid\"" ;
+    fi ;
+    bn=`basename $gitRepo | sed -e 's/[.]git$//'` ;
+    runSshCmd "runChefZero" "bash $bn/cookbooks/do_tut2/templates/default/runChefZero.sh.erb" ;
+    x=`ssh -i $thisDir/$privKey.pem $useUser2@$extIp ls -ld $bn 2>/dev/null | egrep '^l' ` ;
+    if [[ -z $x ]] ; then
+      runSshCmd "linkHomeChefRepo" "mv $bn chef-repo ; ln -s chef-repo/ $bn" ;
+    fi ;
+    runSshCmd "knifeUpload" "cd chef-repo && knife upload cookbooks" ;
+    # runSshCmd "chefClientLocal_do_tut2" "chef-client --local-mode --runlist 'recipe[do_tut2]'" ;
+    
+    runSshCmd "chefClientLocal_do_tut2" "cd $bn/cookbooks/do_tut2 ; berks install ; berks upload ; chef-client -c ~/chef-repo/.chef/knife.rb -o do_tut2" ;
+  fi ;
+else # chef-client
+  true ;
+fi ;
 
 #

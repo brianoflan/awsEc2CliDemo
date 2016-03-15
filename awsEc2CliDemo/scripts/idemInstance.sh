@@ -138,14 +138,14 @@ fi ;
 # alreadyInstance=`ec2-describe-instances -F "vpc-id=$vpcId" -F "subnet-id=$subnetId" ` ;
 alreadyInstance=`ec2-describe-instances -F "vpc-id=$vpcId" -F "subnet-id=$subnetId" -F "private-ip-address=$instancePrivateIp" ` ;
 if [[ $alreadyInstance ]] ; then
-  echo "Already an instance." ;
+  echo "Already an instance." 1>&2 ;
 else
   cmdX="ec2-run-instances $ec2_ami -k $keyPairName -g $secGrpId \
     -t $INSTANCE_TYPE -s $subnetId --private-ip-address $instancePrivateIp \
     --associate-public-ip-address $trueFalseAssociatePublicIpAddress
     " ;
   true ;
-  echo "Cmd: $cmdX" ;
+  echo "Cmd: $cmdX" 1>&2 ;
   error='' ;
   alreadyInstance=`$cmdX` ; error=$? ;
   if [[ $error -gt 0 ]] ; then
