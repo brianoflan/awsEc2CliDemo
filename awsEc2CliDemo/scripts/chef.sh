@@ -4,6 +4,7 @@ export LC_ALL='en_US.UTF-8' ;
 export LANGUAGE='en_US.UTF-8' ;
 export LANG='en_US.UTF-8' ;
 
+useChefZeroOrChefClient='zero' ; # 'zero' or 'client'
 chefDkOmnibusUrl='https://opscode-omnibus-packages.s3.amazonaws.com/el/7/x86_64/chefdk-0.10.0-1.el7.x86_64.rpm' ;
 forChefDkUseOmnibusRpm='1' ; # blank '' for false
 vagrantUrl='https://releases.hashicorp.com/vagrant/1.7.4/vagrant_1.7.4_x86_64.rpm' ;
@@ -300,36 +301,34 @@ if [[ -z $x ]] ; then
   fi ;
 fi ;
 
-if [[ '1' ]] ; then
-  x=`ssh -i $thisDir/$privKey.pem $useUser2@$extIp gem query --local | egrep '^chef.zero' ` ;
-  echo "gem query local chef.zero ='$x'" 1>&2 ;
-  if [[ -z $x ]] ; then
-    ssh -i $thisDir/$privKey.pem $useUser2@$extIp /bin/bash -c "echo ; gem install chef-zero ; echo \$?" \
-      > $thisDir/$tmp/gemInstallChefZero 2>&1 || error=$? ;
-    if [[ $error -gt 0 ]] ; then
-      echo "error with gem install chef-zero='$error'" ;
-      # exit $error ; # Exits 128 even if successful.
-      if [[ $error -eq 128 ]] ; then
-        echo "Maybe ignoring exit code 128." ;
-        error=`tail -1 $thisDir/$tmp/gemInstallChefZero` ;
-        echo "Actual error='$error'." ;
-      fi ;
-      if [[ $error -gt 0 ]] ; then
-        cat $thisDir/$tmp/gemInstallChefZero ;
-        exit $error ;
-      fi ;
+if [[ "zero" == "$useChefZeroOrChefClient" ]] ; then
+  if [[ '1' ]] ; then
+    x=`ssh -i $thisDir/$privKey.pem $useUser2@$extIp gem query --local | egrep '^chef.zero' ` ;
+    echo "gem query local chef.zero ='$x'" 1>&2 ;
+    if [[ -z $x ]] ; then
+      runSshCmd "gemInstallChefZero" "gem install chef-zero" ;
     fi ;
   fi ;
-fi ;
-
-if [[ '1' ]] ; then
-  bn=`basename $gitRepo | sed -e 's/[.]git$//'` ;
-  runSshCmd "runChefZero" "bash $bn/cookbooks/do_tut2/templates/default/runChefZero.sh.erb" ;
-  x=`ssh -i $thisDir/$privKey.pem $useUser2@$extIp ls -ld $bn 2>/dev/null | egrep '^l' ` ;
-  if [[ -z $x ]] ; then
-    runSshCmd "linkHomeChefRepo" "mv $bn chef-repo ; ln -s chef-repo/ $bn" ;
+  
+  if [[ '1' ]] ; then
+    x=`ssh -i $thisDir/$privKey.pem $useUser2@$extIp ls -d /var/tmp/chef-zero.pid ` ;
+    echo "existing chef-zero.pid file ='$x'" 1>&2 ;
+    if [[ $x ]] ; then
+      runSshCmd "runChefZero" "bash -c \"kill -15 \$(/var/tmp/chef-zero.pid) ; rm -f /var/tmp/chef-zero.pid\"" ;
+    fi ;
+    bn=`basename $gitRepo | sed -e 's/[.]git$//'` ;
+    runSshCmd "runChefZero" "bash $bn/cookbooks/do_tut2/templates/default/runChefZero.sh.erb" ;
+    x=`ssh -i $thisDir/$privKey.pem $useUser2@$extIp ls -ld $bn 2>/dev/null | egrep '^l' ` ;
+    if [[ -z $x ]] ; then
+      runSshCmd "linkHomeChefRepo" "mv $bn chef-repo ; ln -s chef-repo/ $bn" ;
+    fi ;
+    runSshCmd "knifeUpload" "cd chef-repo && knife upload cookbooks" ;
+    # runSshCmd "chefClientLocal_do_tut2" "chef-client --local-mode --runlist 'recipe[do_tut2]'" ;
+    
+    runSshCmd "chefClientLocal_do_tut2" "cd $bn/cookbooks/do_tut2 ; berks install ; berks upload ; chef-client -c ~/chef-repo/.chef/knife.rb -o do_tut2" ;
   fi ;
-  runSshCmd "knifeUpload" "cd chef-repo && knife upload ." ;
+else # chef-client
+  true ;
 fi ;
 
 #

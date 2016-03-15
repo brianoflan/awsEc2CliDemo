@@ -9,10 +9,13 @@ fi ;
 # # Valuable but less official: https://www.linux.com/learn/tutorials/761430-an-introduction-to-the-aws-command-line-tool
 
 # BEGIN Chef Server
+  launchChefServer='' ; # blank for false
   # Chef Server 12, free 5 node, https://aws.amazon.com/marketplace/pp/B010OMNV2W, from https://docs.chef.io/aws_marketplace.html
   chefServerAmi='ami-f38346b7' ;
   chefServerIp='10.20.30.8' ;
   chefServerInstType='t2.medium' ;
+  chefServerName=chefServer ;
+  chefServerSecGrp=cliDemoSG_Chef ;
 # END Chef Server
 
 # BEGIN NAS
@@ -20,12 +23,16 @@ fi ;
   # nasSecGrp='cliDemoSG_NAS' ;
   nasIp='10.20.30.6' ;
   nasSecGrp='cliDemoSG_NAS' ;
+  nasName=nas ;
 # END NAS
 # BEGIN HTTPD
   # webIp='12.3.4.7' ;
   webIp='10.20.30.7' ;
   webSecGrp='cliDemoSG_Web' ;
+  webName=web ;
 # END HTTPD
+
+defaultInstanceName=ec2DemoNode1 ;
 
 if [[ -z $secGrpRule_useExclusiveIp ]] ; then
   secGrpRule_useExclusiveIp='1' ;
@@ -177,6 +184,11 @@ echo "Success. myIpv4='$myIpv4'" ;
   execute $thisDir/idemSecGrp.sh "$vpcId" "$secGrpName" "$secGrpDesc" > $tmp/secGrpId ;
   export secGrpIdNas=`cat $tmp/secGrpId ` ;
   
+  secGrpDesc="Chef Server Security Group for Amazon EC2 demo 1." ;
+  secGrpName=$chefServerSecGrp ;
+  execute $thisDir/idemSecGrp.sh "$vpcId" "$secGrpName" "$secGrpDesc" > $tmp/secGrpId ;
+  export secGrpIdChef=`cat $tmp/secGrpId ` ;
+  
   # # Apache HTTPD:
   # execute $thisDir/idemSecGrpRule.sh "$secGrpIdWeb" "80" "tcp" "$myIpv4" > $tmp/secGrpRule ;
 
@@ -194,8 +206,8 @@ echo "Success. myIpv4='$myIpv4'" ;
 # if [[ '1' ]] ; then
   execute $thisDir/idemSecGrpRule.sh "$secGrpId" "22"   "tcp" "$myIpv4" "16" > $tmp/secGrpRule ;
   execute $thisDir/idemSecGrpRule.sh "$secGrpId" "443"  "tcp" "$myIpv4" "16" > $tmp/secGrpRule ;
-  execute $thisDir/idemSecGrpRule.sh "$secGrpId" "8443" "tcp" "$myIpv4" "16" > $tmp/secGrpRule ;
-  execute $thisDir/idemSecGrpRule.sh "$secGrpId" "5672" "tcp" "$myIpv4" "16" > $tmp/secGrpRule ; # RabbitMQ for Chef Server
+  # execute $thisDir/idemSecGrpRule.sh "$secGrpId" "8443" "tcp" "$myIpv4" "16" > $tmp/secGrpRule ;
+  execute $thisDir/idemSecGrpRule.sh "$secGrpIdChef" "5672" "tcp" "$myIpv4" "16" > $tmp/secGrpRule ; # RabbitMQ for Chef Server
   export secGrpRuleTmp=`cat $tmp/secGrpRule ` ;
   echo "Success. secGrpRuleTmp=$secGrpRuleTmp" ;
 # fi ;
@@ -223,20 +235,28 @@ if [[ '1' ]] ; then
     #
   #
   export instanceId=`cat $tmp/instanceId ` ;
+  if [[ $instanceId ]] ; then
+    execute ec2-create-tags $instanceId --tag Name=$defaultInstanceName ;
+  fi ;
   echo "Success. instanceId=$instanceId" ;
 fi ;
 
 # NAS
-  doAssociatePublicIpAddress=false ;
+  # doAssociatePublicIpAddress=false ;
+  doAssociatePublicIpAddress=true ;
   execute $thisDir/idemInstance.sh "$vpcId" "$subnetId" "$secGrpIdNas" "$keyPairName" "$USE_EC2_AMI" \
     "$nasIp" "$doAssociatePublicIpAddress" > $tmp/instanceId ;
     #
   #
   export nasInstance=`cat $tmp/instanceId ` ;
+  if [[ $nasInstance ]] ; then
+    execute ec2-create-tags $nasInstance --tag Name=$nasName ;
+  fi ;
   echo "nasInstance = $nasInstance" 1>&2 ;
 #
 
 # Chef Server
+if [[ $launchChefServer ]] ; then
   secGrpIdChefServer=$secGrpId ;
   doAssociatePublicIpAddress=false ;
   export INSTANCE_TYPE=t2.medium ;
@@ -245,7 +265,11 @@ fi ;
     #
   #
   export chefServerInstance=`cat $tmp/instanceId ` ;
+  if [[ $chefServerInstance ]] ; then
+    execute ec2-create-tags $chefServerInstance --tag Name=$chefServerName ;
+  fi ;
   echo "chefServerInstance = $chefServerInstance" 1>&2 ;
+fi ;
 #
 
 #
